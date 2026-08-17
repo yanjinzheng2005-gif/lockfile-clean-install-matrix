@@ -1,0 +1,1 @@
+throw new Error('LIFECYCLE_SCRIPT_EXECUTED');

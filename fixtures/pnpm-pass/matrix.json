@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "projectPath": ".",
+  "manager": "pnpm",
+  "baselineVersion": "11.17.0",
+  "candidateVersion": "12.0.0-beta.0",
+  "nodeVersion": "24.16.0",
+  "timeoutSeconds": 300,
+  "outputDir": "lockfile-matrix-results"
+}

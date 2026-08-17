@@ -1,0 +1,6 @@
+* text=auto eol=lf
+dist/*.js text eol=lf
+dist/*.cjs text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

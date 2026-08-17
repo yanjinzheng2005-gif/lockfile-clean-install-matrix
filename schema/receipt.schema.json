@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/blob/main/schema/receipt.schema.json",
+  "title": "Lockfile Clean Install Matrix receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "toolVersion", "generatedAt", "config", "environment", "preflight", "baseline", "candidate", "comparison", "sourceUnchanged", "reproduceCommand"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "toolVersion": { "type": "string" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manager", "baselineVersion", "candidateVersion", "nodeVersion", "registry"],
+      "properties": {
+        "manager": { "enum": ["npm", "pnpm"] },
+        "baselineVersion": { "type": "string" },
+        "candidateVersion": { "type": "string" },
+        "nodeVersion": { "type": "string" },
+        "registry": { "const": "https://registry.npmjs.org" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": ["image"],
+      "properties": {
+        "image": {
+          "type": "object",
+          "required": ["reference", "id", "repoDigest", "platform", "dockerVersion", "containerUser"],
+          "properties": {
+            "reference": { "type": "string" },
+            "id": { "type": "string" },
+            "repoDigest": { "type": "string" },
+            "platform": { "const": "linux/amd64" },
+            "dockerVersion": { "type": "string" },
+            "containerUser": { "type": "string" }
+          }
+        }
+      }
+    },
+    "preflight": { "type": "object" },
+    "baseline": { "$ref": "#/$defs/leg" },
+    "candidate": { "$ref": "#/$defs/leg" },
+    "comparison": {
+      "type": "object",
+      "required": ["verdict", "reasons", "dependencyDiff", "binDiff"],
+      "properties": {
+        "verdict": { "enum": ["NO_REGRESSION", "REGRESSION", "REVIEW", "IMPROVEMENT", "INCONCLUSIVE"] },
+        "reasons": { "type": "array", "items": { "type": "string" } },
+        "dependencyDiff": { "type": "object" },
+        "binDiff": { "type": "object" }
+      }
+    },
+    "sourceUnchanged": { "type": "boolean" },
+    "reproduceCommand": { "type": "string" }
+  },
+  "$defs": {
+    "leg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "requestedVersion", "observedVersion", "status", "installExitCode", "installDurationMs", "outputTruncated", "installLog", "mutations", "inventory", "binShims", "warnings"],
+      "properties": {
+        "label": { "enum": ["baseline", "candidate"] },
+        "requestedVersion": { "type": "string" },
+        "observedVersion": { "type": "string" },
+        "status": { "enum": ["PASS", "INSTALL_FAILED", "HANG", "MUTATED", "NETWORK_INCONCLUSIVE", "INVENTORY_INCONCLUSIVE", "ENVIRONMENT_ERROR"] },
+        "installExitCode": { "type": ["integer", "null"] },
+        "installDurationMs": { "type": "integer", "minimum": 0 },
+        "outputTruncated": { "type": "boolean" },
+        "installLog": { "type": "string" },
+        "mutations": { "type": "array", "items": { "type": "object" } },
+        "inventory": { "type": ["object", "null"] },
+        "binShims": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

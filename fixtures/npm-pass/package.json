@@ -1,0 +1,17 @@
+{
+  "name": "lockfile-matrix-npm-pass-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/child"
+  ],
+  "dependencies": {
+    "is-number": "7.0.0"
+  },
+  "scripts": {
+    "preinstall": "node scripts/fail-if-run.mjs",
+    "install": "node scripts/fail-if-run.mjs",
+    "postinstall": "node scripts/fail-if-run.mjs",
+    "prepare": "node scripts/fail-if-run.mjs"
+  }
+}

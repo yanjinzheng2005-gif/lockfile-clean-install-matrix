@@ -1,0 +1,62 @@
+{
+  "name": "lockfile-clean-install-matrix",
+  "version": "0.1.0",
+  "description": "Prove a committed lockfile still cold-installs across package-manager versions without mutating protected files.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.10"
+  },
+  "bin": {
+    "lockfile-clean-install-matrix": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test tests/*.test.js && node scripts/check-test-count.mjs",
+    "license:check": "node scripts/check-licenses.mjs",
+    "test:release": "npm run typecheck && npm test && npm run license:check && node scripts/check-dist.mjs && node scripts/check-dist-sync.mjs && node scripts/check-boundaries.mjs && node scripts/check-dist-committed.mjs",
+    "fixture:npm:pass": "node dist/cli.js run --config fixtures/npm-pass/matrix.json --fail-on review",
+    "fixture:npm:regression": "node dist/cli.js run --config fixtures/npm-regression/matrix.json --fail-on never",
+    "fixture:pnpm:pass": "node dist/cli.js run --config fixtures/pnpm-pass/matrix.json --fail-on review"
+  },
+  "keywords": [
+    "lockfile",
+    "npm",
+    "pnpm",
+    "ci",
+    "reproducibility",
+    "github-action"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix.git"
+  },
+  "homepage": "https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix#readme",
+  "bugs": {
+    "url": "https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/issues"
+  },
+  "files": [
+    "dist",
+    "examples",
+    "schema",
+    "action.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md",
+    "VALIDATION.md"
+  ],
+  "dependencies": {
+    "yaml": "2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "ajv": "8.20.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

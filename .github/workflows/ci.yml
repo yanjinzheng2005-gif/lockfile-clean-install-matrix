@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    name: Release gate / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - name: Install locked development dependencies
+        run: npm ci --ignore-scripts
+      - name: Audit known high-severity dependency vulnerabilities
+        run: npm audit --audit-level=high
+      - name: Run the complete local release gate
+        run: npm run test:release
+
+  linux-cold-install-goldens:
+    name: Real Linux cold-install goldens
+    needs: release-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Exercise the committed Action before any local build
+        uses: ./
+        with:
+          config: fixtures/npm-pass/matrix.json
+          fail-on: review
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked development dependencies
+        run: npm ci --ignore-scripts
+      - name: Build committed entrypoints
+        run: npm run build
+      - name: Probe real Docker timeout cleanup and protected-file mutation
+        run: node scripts/real-docker-boundary-probe.mjs
+      - name: Run npm no-regression golden
+        run: npm run fixture:npm:pass
+      - name: Assert npm no-regression receipt
+        run: node scripts/assert-receipt.mjs fixtures/npm-pass/lockfile-matrix-results/lockfile-matrix-report.json NO_REGRESSION PASS PASS
+      - name: Run pnpm no-regression golden
+        run: npm run fixture:pnpm:pass
+      - name: Assert pnpm no-regression receipt
+        run: node scripts/assert-receipt.mjs fixtures/pnpm-pass/lockfile-matrix-results/lockfile-matrix-report.json NO_REGRESSION PASS PASS
+      - name: Run public npm regression golden
+        run: npm run fixture:npm:regression
+      - name: Assert public npm regression receipt
+        run: node scripts/assert-receipt.mjs fixtures/npm-regression/lockfile-matrix-results/lockfile-matrix-report.json REGRESSION PASS INSTALL_FAILED
+      - name: Upload receipts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-cold-install-receipts
+          path: |
+            fixtures/*/lockfile-matrix-results/
+            validation-results/
+          if-no-files-found: warn
+          retention-days: 7

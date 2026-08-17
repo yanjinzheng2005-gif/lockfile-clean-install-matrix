@@ -1,0 +1,24 @@
+name: Lockfile Clean Install Matrix
+description: Compare exact npm or pnpm versions with isolated Linux cold installs and evidence receipts.
+author: Micro Tool Lab
+inputs:
+  config:
+    description: Path to a lockfile-clean-install-matrix/v1 JSON config inside the checked-out workspace.
+    required: true
+  fail-on:
+    description: regression, review, or never.
+    required: false
+    default: review
+outputs:
+  verdict:
+    description: NO_REGRESSION, REGRESSION, REVIEW, IMPROVEMENT, or INCONCLUSIVE.
+  report-json:
+    description: Absolute path to the JSON receipt.
+  report-markdown:
+    description: Absolute path to the Markdown receipt.
+runs:
+  using: node24
+  main: dist/action.cjs
+branding:
+  icon: package
+  color: blue

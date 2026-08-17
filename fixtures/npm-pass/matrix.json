@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "projectPath": ".",
+  "manager": "npm",
+  "baselineVersion": "11.14.1",
+  "candidateVersion": "11.16.0",
+  "nodeVersion": "24.16.0",
+  "timeoutSeconds": 300,
+  "outputDir": "lockfile-matrix-results"
+}

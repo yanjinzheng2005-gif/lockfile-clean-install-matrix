@@ -1,0 +1,14 @@
+{
+  "name": "lockfile-matrix-npm-child",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "is-odd": "3.0.1"
+  },
+  "scripts": {
+    "preinstall": "node ../../scripts/fail-if-run.mjs",
+    "install": "node ../../scripts/fail-if-run.mjs",
+    "postinstall": "node ../../scripts/fail-if-run.mjs",
+    "prepare": "node ../../scripts/fail-if-run.mjs"
+  }
+}
