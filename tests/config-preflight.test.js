@@ -16,6 +16,14 @@ test('loads a contained exact-version config', async (t) => {
   assert.equal(config.baselineVersion, '11.14.1');
 });
 
+test('does not treat a stray pnpm-workspace file as an npm workspace declaration', async (t) => {
+  const fixture = await createNpmFixture();
+  t.after(() => rm(fixture.root, { recursive: true, force: true }));
+  await writeFile(path.join(fixture.project, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  const config = await loadConfig(fixture.configPath, { allowedRoot: fixture.root });
+  assert.equal((await preflight(config)).workspaceProject, false);
+});
+
 test('rejects absolute and parent-traversal project or output paths', () => {
   const base = '/tmp/trusted/lockfile-matrix.json';
   const common = { schemaVersion: 1, manager: 'npm', baselineVersion: '1.0.0', candidateVersion: '2.0.0', nodeVersion: '20.10.0' };

@@ -61,7 +61,7 @@ export async function preflight(config) {
   const warnings = [];
   let workspaceProject = false;
   const relativeSet = new Set(scan.files.map((file) => file.relative));
-  workspaceProject = relativeSet.has('pnpm-workspace.yaml');
+  workspaceProject = config.manager === 'pnpm' && relativeSet.has('pnpm-workspace.yaml');
   if (!relativeSet.has('package.json')) problems.push('Root package.json is required.');
 
   let lockfile = 'pnpm-lock.yaml';

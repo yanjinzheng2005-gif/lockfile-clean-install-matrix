@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 const inside = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { encoding: 'utf8' });
 if (inside.status !== 0 || inside.stdout.trim() !== 'true') throw new Error('Committed dist check requires a Git worktree.');
-for (const file of ['dist/cli.js', 'dist/action.cjs']) {
+for (const file of ['dist/cli.cjs', 'dist/action.cjs']) {
   const tracked = spawnSync('git', ['ls-files', '--error-unmatch', file], { encoding: 'utf8' });
   if (tracked.status !== 0) throw new Error(`${file} is not tracked by Git.`);
 }

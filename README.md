@@ -44,7 +44,7 @@ Build and run from a checkout:
 ```sh
 npm ci --ignore-scripts
 npm run build
-node dist/cli.js run --config examples/lockfile-matrix.example.json --fail-on review
+node dist/cli.cjs run --config examples/lockfile-matrix.example.json --fail-on review
 ```
 
 Config fields:

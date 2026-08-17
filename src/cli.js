@@ -1,4 +1,3 @@
-import { pathToFileURL } from 'node:url';
 import { DockerRunner } from './docker.js';
 import { BoundaryError, EnvironmentError, UsageError } from './errors.js';
 import { loadConfig } from './config.js';
@@ -53,8 +52,4 @@ export function parseArguments(argv) {
   }
   if (!config) throw new UsageError('--config is required.');
   return { config, failOn };
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  process.exitCode = await main();
 }

@@ -8,7 +8,7 @@
     "node": ">=20.10"
   },
   "bin": {
-    "lockfile-clean-install-matrix": "dist/cli.js"
+    "lockfile-clean-install-matrix": "dist/cli.cjs"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -17,9 +17,9 @@
     "test": "npm run build && node --test tests/*.test.js && node scripts/check-test-count.mjs",
     "license:check": "node scripts/check-licenses.mjs",
     "test:release": "npm run syntax:check && npm run typecheck && npm test && npm run license:check && node scripts/check-dist.mjs && node scripts/check-dist-sync.mjs && node scripts/check-boundaries.mjs && node scripts/check-dist-committed.mjs",
-    "fixture:npm:pass": "node dist/cli.js run --config fixtures/npm-pass/matrix.json --fail-on review",
-    "fixture:npm:regression": "node dist/cli.js run --config fixtures/npm-regression/matrix.json --fail-on never",
-    "fixture:pnpm:pass": "node dist/cli.js run --config fixtures/pnpm-pass/matrix.json --fail-on review"
+    "fixture:npm:pass": "node dist/cli.cjs run --config fixtures/npm-pass/matrix.json --fail-on review",
+    "fixture:npm:regression": "node dist/cli.cjs run --config fixtures/npm-regression/matrix.json --fail-on never",
+    "fixture:pnpm:pass": "node dist/cli.cjs run --config fixtures/pnpm-pass/matrix.json --fail-on review"
   },
   "keywords": [
     "lockfile",

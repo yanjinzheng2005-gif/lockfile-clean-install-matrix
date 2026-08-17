@@ -6,16 +6,16 @@ Validation date: 2026-08-18 (Asia/Shanghai)
 
 Local candidate gate: **PASS**.
 
-Real Linux Docker goldens: **not run yet** because the development Mac has no Docker installation. They are encoded in CI and remain a release blocker. This file must not be read as evidence of a public release, Marketplace listing, or external adoption.
+Real Linux Docker goldens: **partially proven, not yet green as a complete run**. The second private run proved the three Node release gates, the committed Action before build, real timeout cleanup, and real protected-file mutation. The CLI then failed before its npm golden because an ESM bundle could not load YAML's CommonJS path. The CLI has been moved to a CJS entrypoint; a new Linux run is required. This file must not be read as evidence of a public release, Marketplace listing, or external adoption.
 
 ## Local gate
 
 Environment: macOS arm64, Node.js 25.3.0, npm 11.7.0.
 
 - Strict JS type checking: PASS.
-- JavaScript syntax scan: PASS across 33 source, script, and test files.
-- Automated tests: 37/37 PASS.
-- Test-presence guard: PASS, 5 files and 29 static declarations (parameterized tests expand to 37 runtime cases).
+- JavaScript syntax scan: PASS across 34 source, script, and test files.
+- Automated tests: 38/38 PASS.
+- Test-presence guard: PASS, 5 files and 30 static declarations (parameterized tests expand to 38 runtime cases).
 - Result branches covered: no regression, deterministic candidate failure, network inconclusive, timeout, protected-file mutation, and logical-tree difference.
 - Path traversal, output symlink escape, source symlink, `.npmrc`, credential URL, nested override Git spec, and out-of-root local dependency rejection: PASS.
 - Secret/path redaction and workflow-command escaping: PASS.
@@ -50,4 +50,4 @@ If the no-symlink adaptation of npm/cli#9433 does not reproduce the published re
 
 Local fake-Docker tests validate orchestration, classification, mutation detection, reports, and safety arguments. They do not prove Docker behavior, actual manager flags, Node image availability, or the public regression. Only the real Linux job can close those items.
 
-External user feedback: 0. Public repository: not created. Release/tag: not created. Marketplace: not listed. Community launch: not performed.
+External user feedback: 0. Repository visibility: private validation only. Public repository: not available. Release/tag: not created. Marketplace: not listed. Community launch: not performed.

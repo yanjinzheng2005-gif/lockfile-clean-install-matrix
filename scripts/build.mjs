@@ -4,12 +4,12 @@ import { chmod, mkdir } from 'node:fs/promises';
 await mkdir('dist', { recursive: true });
 
 await build({
-  entryPoints: ['src/cli.js'],
-  outfile: 'dist/cli.js',
+  entryPoints: ['src/cli-entry.js'],
+  outfile: 'dist/cli.cjs',
   bundle: true,
   platform: 'node',
   target: 'node20',
-  format: 'esm',
+  format: 'cjs',
   banner: { js: '#!/usr/bin/env node' },
   sourcemap: false,
   legalComments: 'none',
@@ -26,4 +26,4 @@ await build({
   legalComments: 'none',
 });
 
-await chmod('dist/cli.js', 0o755);
+await chmod('dist/cli.cjs', 0o755);
