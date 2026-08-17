@@ -53,7 +53,7 @@ try {
     projectDir,
     cacheDir,
     registry: 'https://registry.npmjs.org',
-    command: ['node', '-e', "require('node:fs').writeFileSync('package-lock.json', '{\\"mutated\\":true}\\n')"],
+    command: ['node', '-e', `require('node:fs').writeFileSync('package-lock.json', '{"mutated":true}\\n')`],
   });
   const mutationRun = await runner.execute(runner.command, mutationArgs, {
     env: runner.hostEnv,

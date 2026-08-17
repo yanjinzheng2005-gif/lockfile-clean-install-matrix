@@ -13,6 +13,7 @@ Real Linux Docker goldens: **not run yet** because the development Mac has no Do
 Environment: macOS arm64, Node.js 25.3.0, npm 11.7.0.
 
 - Strict JS type checking: PASS.
+- JavaScript syntax scan: PASS across 33 source, script, and test files.
 - Automated tests: 37/37 PASS.
 - Test-presence guard: PASS, 5 files and 29 static declarations (parameterized tests expand to 37 runtime cases).
 - Result branches covered: no regression, deterministic candidate failure, network inconclusive, timeout, protected-file mutation, and logical-tree difference.
