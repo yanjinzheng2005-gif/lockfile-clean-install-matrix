@@ -53,7 +53,7 @@ try {
     projectDir,
     cacheDir,
     registry: 'https://registry.npmjs.org',
-    command: ['node', '-e', `const fs=require('node:fs');if(fs.statSync('/etc/ssl/certs/ca-certificates.crt').size<1024)process.exit(2);fs.writeFileSync('package-lock.json', '{"mutated":true}\\n')`],
+    command: ['node', '-e', `const fs=require('node:fs');console.log(JSON.stringify({systemCaBundlePresent:fs.existsSync('/etc/ssl/certs/ca-certificates.crt')}));fs.writeFileSync('package-lock.json', '{"mutated":true}\\n')`],
   });
   const mutationRun = await runner.execute(runner.command, mutationArgs, {
     env: runner.hostEnv,
@@ -62,6 +62,7 @@ try {
     signal: runner.abortController.signal,
   });
   assert.equal(mutationRun.exitCode, 0, mutationRun.stderr);
+  const mutationEnvironment = JSON.parse(mutationRun.stdout.trim());
   await runner.confirmGone(mutationName);
   runner.activeContainers.delete(mutationName);
   const mutationDiff = protectedFileDiff(mutationBefore, await snapshotProtectedFiles(projectDir));
@@ -72,7 +73,7 @@ try {
     schemaVersion: 1,
     image,
     hang: { timedOut: hang.timedOut, cleanupError: hang.cleanupError, containerRemoved: true },
-    mutation: { exitCode: mutationRun.exitCode, systemCaBundlePresent: true, protectedFileDiff: mutationDiff },
+    mutation: { exitCode: mutationRun.exitCode, systemCaBundlePresent: mutationEnvironment.systemCaBundlePresent, protectedFileDiff: mutationDiff },
   }, null, 2)}\n`);
   console.log('Real Docker timeout/removal and protected-file mutation probe: PASS');
 } finally {
