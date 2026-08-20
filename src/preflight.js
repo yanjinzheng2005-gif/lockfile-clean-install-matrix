@@ -16,6 +16,8 @@ const PNPM_EXECUTION_KEYS = new Set([
   'pnpmfile',
   'globalpnpmfile',
   'managepackagemanagerversions',
+  'pmonfail',
+  'runtimeonfail',
   'usenodeversion',
   'executionenv',
 ]);
@@ -174,6 +176,11 @@ function inspectDependencySpecs(manifest, manifestDir, root, relative, problems)
   if (devEngines && typeof devEngines === 'object' && !Array.isArray(devEngines)) {
     const value = /** @type {Record<string,unknown>} */ (devEngines);
     if (value.runtime || value.packageManager) problems.push(`${relative} declares devEngines runtime/package-manager switching, which V0.1 refuses.`);
+  }
+  const engines = manifest.engines;
+  if (engines && typeof engines === 'object' && !Array.isArray(engines)) {
+    const value = /** @type {Record<string,unknown>} */ (engines);
+    if (value.runtime || value.packageManager) problems.push(`${relative} declares engines runtime/package-manager switching, which V0.1 refuses.`);
   }
 }
 

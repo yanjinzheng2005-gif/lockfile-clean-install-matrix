@@ -18,6 +18,7 @@ V0.1 is a validation candidate. The local release gate passes, but the real Linu
 - Project lifecycle scripts disabled in both CLI arguments and container environment.
 - Exact package managers bootstrapped in a separate projectless container. pnpm's own package bootstrap script is allowed there because pnpm 12 uses it to install its native binary; that container receives no project mount or host secrets. Later project phases mount the manager directory read-only and use a different writable project cache/store.
 - pnpm file hooks refused at preflight and disabled again at execution.
+- Project-requested package-manager switching is disabled (`pmOnFail=ignore` on pnpm 11/12; the legacy switch is disabled on pnpm 10), so both legs keep using their requested exact versions even when `packageManager` pins another pnpm release.
 - Install success, deterministic failure, timeout, protected-file mutation, network uncertainty, logical dependency inventory, and bin-shim comparison.
 - JSON and Markdown receipts from the same result object.
 
@@ -92,7 +93,7 @@ The inventory evidence limit is 16 MiB per leg. Exceeding it produces `INVENTORY
 
 A green receipt means two exact manager versions cold-installed the copied project under the stated image and restrictions. It is not evidence that every OS, architecture, registry, lifecycle-script path, native build, or application behavior is compatible.
 
-The controlled regression fixture is adapted from [npm/cli#9433](https://github.com/npm/cli/issues/9433). The pnpm preflight floor and repository-config refusals account for [GHSA-gj8w-mvpf-x27x](https://github.com/pnpm/pnpm/security/advisories/GHSA-gj8w-mvpf-x27x) and [GHSA-w466-c33r-3gjp](https://github.com/pnpm/pnpm/security/advisories/GHSA-w466-c33r-3gjp). Real Linux validation, current limitations, and exact gate results are recorded in [VALIDATION.md](VALIDATION.md).
+The authoritative red golden is pnpm 11.17.0 versus pnpm 12.0.0-beta.0 in the pinned minimal Node image, where pnpm 12's native network client cannot load a system CA bundle that the image does not contain. A no-symlink adaptation of [npm/cli#9433](https://github.com/npm/cli/issues/9433) did not reproduce the issue and is retained only as rejected research history. The pnpm preflight floor and repository-config refusals account for [GHSA-gj8w-mvpf-x27x](https://github.com/pnpm/pnpm/security/advisories/GHSA-gj8w-mvpf-x27x) and [GHSA-w466-c33r-3gjp](https://github.com/pnpm/pnpm/security/advisories/GHSA-w466-c33r-3gjp). Real Linux validation, current limitations, and exact gate results are recorded in [VALIDATION.md](VALIDATION.md).
 
 ## Development
 

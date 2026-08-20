@@ -257,7 +257,11 @@ export function managerCommand(manager, version, phase, registry, options = {}) 
     if (phase === 'install') return [...prefix, 'ci', '--ignore-scripts', '--no-audit', '--no-fund', '--cache', '/matrix-cache/project-npm-cache', '--registry', registry];
     return [...prefix, 'ls', '--all', '--json', '--long=false', '--cache', '/matrix-cache/project-npm-cache', ...(options.workspaceProject ? ['--workspaces', '--include-workspace-root'] : [])];
   }
-  const safe = ['--config.manage-package-manager-versions=false', '--config.ignore-pnpmfile=true'];
+  const major = Number(version.split('.')[0]);
+  const safe = [
+    '--config.ignore-pnpmfile=true',
+    major >= 11 ? '--pm-on-fail=ignore' : '--config.manage-package-manager-versions=false',
+  ];
   if (phase === 'version') return [...prefix, ...safe, '--version'];
   if (phase === 'install') {
     return [...prefix, ...safe, 'install', '--frozen-lockfile', '--ignore-scripts', '--store-dir', '/matrix-cache/pnpm-store', '--registry', registry, '--reporter', 'append-only'];

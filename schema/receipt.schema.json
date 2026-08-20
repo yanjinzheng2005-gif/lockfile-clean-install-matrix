@@ -40,10 +40,11 @@
         "managerBootstrap": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["projectMounted", "projectLifecycleScripts", "pnpmPackageBootstrapScripts"],
+          "required": ["projectMounted", "projectLifecycleScripts", "projectVersionSwitching", "pnpmPackageBootstrapScripts"],
           "properties": {
             "projectMounted": { "const": false },
             "projectLifecycleScripts": { "const": "disabled" },
+            "projectVersionSwitching": { "const": "disabled" },
             "pnpmPackageBootstrapScripts": { "const": "allowed-in-projectless-container" }
           }
         }

@@ -18,7 +18,7 @@ for (const required of [
   'npm-shrinkwrap.json', 'bootstrap-npm', 'project-npm-cache', '--config.include-workspace-root=true',
   "replaceAll(' ', '_')", 'default: review', 'real-docker-boundary-probe.mjs', 'check-dist-committed.mjs',
   "from './policy.js'", 'bootstrapManagerCommand', 'target=/matrix-manager', "options.projectDir ? ',readonly' : ''", 'PNPM_PATH_KEYS',
-  'fixture:pnpm:regression', 'projectMounted: false',
+  'fixture:pnpm:regression', 'projectMounted: false', 'projectVersionSwitching', '--pm-on-fail=ignore', 'pmonfail', 'runtimeonfail',
 ]) {
   if (!combined.includes(required)) throw new Error(`Required safety boundary is missing: ${required}`);
 }

@@ -112,14 +112,19 @@ test('rejects pnpm configDependencies, package-manager lock metadata, and worksp
   configJson.baselineVersion = '11.17.0';
   configJson.candidateVersion = '12.0.0-beta.0';
   await writeFile(fixture.configPath, JSON.stringify(configJson));
+  const manifest = JSON.parse(await (await import('node:fs/promises')).readFile(path.join(fixture.project, 'package.json'), 'utf8'));
+  manifest.engines = { runtime: { name: 'node', onFail: 'download' } };
+  await writeFile(path.join(fixture.project, 'package.json'), JSON.stringify(manifest));
   await rm(path.join(fixture.project, 'package-lock.json'));
-  await writeFile(path.join(fixture.project, 'pnpm-workspace.yaml'), 'packages:\n  - .\nconfigDependencies:\n  pacquet: 0.2.2\nregistries:\n  private: https://evil.example/\nmodulesDir: /matrix-manager/node_modules\n');
+  await writeFile(path.join(fixture.project, 'pnpm-workspace.yaml'), 'packages:\n  - .\nconfigDependencies:\n  pacquet: 0.2.2\nregistries:\n  private: https://evil.example/\nmodulesDir: /matrix-manager/node_modules\npmOnFail: download\n');
   await writeFile(path.join(fixture.project, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\nimporters:\n  .:\n    packageManagerDependencies:\n      pnpm:\n        specifier: 9.3.0\n        version: 9.3.0\n");
   const config = await loadConfig(fixture.configPath, { allowedRoot: fixture.root });
   await assert.rejects(preflight(config), (error) => error instanceof BoundaryError
     && error.details.some((detail) => detail.includes('configDependencies'))
     && error.details.some((detail) => detail.includes('registries'))
     && error.details.some((detail) => detail.includes('modulesDir'))
+    && error.details.some((detail) => detail.includes('pmOnFail'))
+    && error.details.some((detail) => detail.includes('engines runtime'))
     && error.details.some((detail) => detail.includes('packageManagerDependencies')));
 });
 

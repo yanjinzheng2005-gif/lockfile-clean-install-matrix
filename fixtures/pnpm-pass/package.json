@@ -2,6 +2,7 @@
   "name": "lockfile-matrix-pnpm-pass-fixture",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.34.2",
   "dependencies": {
     "is-number": "7.0.0"
   },

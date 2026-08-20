@@ -18,6 +18,7 @@ test('Docker argv enforces the V0.1 isolation boundary', () => {
 test('manager argv fixes exact versions and disables scripts and pnpm hooks', () => {
   const npm = managerCommand('npm', '11.14.1', 'install', 'https://registry.npmjs.org').join(' ');
   const pnpm = managerCommand('pnpm', '11.17.0', 'install', 'https://registry.npmjs.org').join(' ');
+  const pnpm10 = managerCommand('pnpm', '10.34.2', 'install', 'https://registry.npmjs.org').join(' ');
   const npmBootstrap = bootstrapManagerCommand('npm', '11.14.1', 'https://registry.npmjs.org').join(' ');
   const pnpmBootstrap = bootstrapManagerCommand('pnpm', '12.0.0-beta.0', 'https://registry.npmjs.org').join(' ');
   const pnpmInventory = managerCommand('pnpm', '11.17.0', 'inventory', 'https://registry.npmjs.org').join(' ');
@@ -28,7 +29,8 @@ test('manager argv fixes exact versions and disables scripts and pnpm hooks', ()
   assert.ok(pnpmBootstrap.includes('pnpm@12.0.0-beta.0'));
   assert.ok(pnpmBootstrap.includes('--ignore-scripts=false'));
   assert.ok(pnpm.includes('--config.ignore-pnpmfile=true'));
-  assert.ok(pnpm.includes('--config.manage-package-manager-versions=false'));
+  assert.ok(pnpm.includes('--pm-on-fail=ignore'));
+  assert.ok(pnpm10.includes('--config.manage-package-manager-versions=false'));
   assert.ok(pnpm.includes('--frozen-lockfile'));
   assert.ok(pnpmInventory.includes('--recursive'));
   assert.ok(pnpmInventory.includes('--config.include-workspace-root=true'));

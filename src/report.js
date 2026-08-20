@@ -62,6 +62,7 @@ export function renderMarkdown(receipt) {
     '- Container: non-root, read-only root filesystem, all Linux capabilities dropped, no-new-privileges, bounded CPU/memory/PIDs.',
     '- No host HOME, credentials, SSH material, Git config, Docker socket, or parent environment is mounted or forwarded.',
     '- Exact package managers are bootstrapped in a separate container with no project mount. pnpm package bootstrap scripts may run there because pnpm 12 uses them to install its native binary; project dependency scripts remain disabled.',
+    '- Project package-manager auto-switching is disabled; each leg keeps executing the exact requested manager even when package.json pins another pnpm version.',
     '',
     '## Reproduce',
     '',

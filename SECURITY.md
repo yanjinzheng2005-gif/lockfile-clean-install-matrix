@@ -28,6 +28,7 @@ The input repository and dependency metadata may be malformed or hostile. V0.1 t
 - V0.1 deliberately refuses `.npmrc`, private registries, source symlinks, and custom pnpm hooks instead of silently changing their semantics.
 - pnpm versions below 10.34.2 or 11.5.3 in their respective major lines are refused. Repository `configDependencies` and `packageManagerDependencies` are refused even on patched versions because V0.1 does not need those execution paths.
 - Repository-controlled pnpm path relocation (`modulesDir`, virtual/global store, cache/state, lockfile/global/bin directories) is refused so project materialization cannot overwrite the read-only manager boundary.
+- Repository `pmOnFail`/runtime fallback settings are refused, and project-driven manager switching is explicitly disabled for each supported pnpm major line.
 
 ## GitHub Actions
 

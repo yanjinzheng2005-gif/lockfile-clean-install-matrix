@@ -17,7 +17,7 @@ External tools selected at runtime are not redistributed by this repository:
 - Docker Engine/CLI and GitHub-hosted runner images — their own distribution terms apply.
 - GitHub Actions used by CI are invoked by immutable commit SHA and are not copied into this repository.
 
-The public npm regression fixture is independently adapted from the factual reproduction steps in npm/cli#9433; no npm source code is copied.
+The rejected npm reproduction attempt is independently adapted from factual steps in npm/cli#9433; no npm source code is copied, and the adaptation is not claimed as a reproduced regression.
 
 Run `npm run license:check` after every dependency update. This file must be re-reviewed before a release when fixed manager or image versions change.
 

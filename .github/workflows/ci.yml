@@ -72,10 +72,6 @@ jobs:
         run: npm run fixture:pnpm:regression
       - name: Assert pnpm 12 Linux CA regression receipt
         run: node scripts/assert-receipt.mjs fixtures/pnpm-pass/lockfile-matrix-regression-results/lockfile-matrix-report.json REGRESSION PASS INSTALL_FAILED
-      - name: Run public npm regression golden
-        run: npm run fixture:npm:regression
-      - name: Assert public npm regression receipt
-        run: node scripts/assert-receipt.mjs fixtures/npm-regression/lockfile-matrix-results/lockfile-matrix-report.json REGRESSION PASS INSTALL_FAILED
       - name: Upload receipts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

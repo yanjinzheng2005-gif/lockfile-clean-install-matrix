@@ -7718,7 +7718,11 @@ function managerCommand(manager, version, phase, registry, options = {}) {
     if (phase === "install") return [...prefix, "ci", "--ignore-scripts", "--no-audit", "--no-fund", "--cache", "/matrix-cache/project-npm-cache", "--registry", registry];
     return [...prefix, "ls", "--all", "--json", "--long=false", "--cache", "/matrix-cache/project-npm-cache", ...options.workspaceProject ? ["--workspaces", "--include-workspace-root"] : []];
   }
-  const safe = ["--config.manage-package-manager-versions=false", "--config.ignore-pnpmfile=true"];
+  const major = Number(version.split(".")[0]);
+  const safe = [
+    "--config.ignore-pnpmfile=true",
+    major >= 11 ? "--pm-on-fail=ignore" : "--config.manage-package-manager-versions=false"
+  ];
   if (phase === "version") return [...prefix, ...safe, "--version"];
   if (phase === "install") {
     return [...prefix, ...safe, "install", "--frozen-lockfile", "--ignore-scripts", "--store-dir", "/matrix-cache/pnpm-store", "--registry", registry, "--reporter", "append-only"];
@@ -8282,6 +8286,8 @@ var PNPM_EXECUTION_KEYS = /* @__PURE__ */ new Set([
   "pnpmfile",
   "globalpnpmfile",
   "managepackagemanagerversions",
+  "pmonfail",
+  "runtimeonfail",
   "usenodeversion",
   "executionenv"
 ]);
@@ -8417,6 +8423,14 @@ function inspectDependencySpecs(manifest, manifestDir, root, relative, problems)
       devEngines
     );
     if (value.runtime || value.packageManager) problems.push(`${relative} declares devEngines runtime/package-manager switching, which V0.1 refuses.`);
+  }
+  const engines = manifest.engines;
+  if (engines && typeof engines === "object" && !Array.isArray(engines)) {
+    const value = (
+      /** @type {Record<string,unknown>} */
+      engines
+    );
+    if (value.runtime || value.packageManager) problems.push(`${relative} declares engines runtime/package-manager switching, which V0.1 refuses.`);
   }
 }
 function inspectDependencyValue(raw, label, manifestDir, root, problems) {
@@ -8618,6 +8632,7 @@ function renderMarkdown(receipt) {
     "- Container: non-root, read-only root filesystem, all Linux capabilities dropped, no-new-privileges, bounded CPU/memory/PIDs.",
     "- No host HOME, credentials, SSH material, Git config, Docker socket, or parent environment is mounted or forwarded.",
     "- Exact package managers are bootstrapped in a separate container with no project mount. pnpm package bootstrap scripts may run there because pnpm 12 uses them to install its native binary; project dependency scripts remain disabled.",
+    "- Project package-manager auto-switching is disabled; each leg keeps executing the exact requested manager even when package.json pins another pnpm version.",
     "",
     "## Reproduce",
     "",
@@ -8756,6 +8771,7 @@ async function runMatrix(config, options = {}) {
         managerBootstrap: {
           projectMounted: false,
           projectLifecycleScripts: "disabled",
+          projectVersionSwitching: "disabled",
           pnpmPackageBootstrapScripts: "allowed-in-projectless-container"
         }
       },
