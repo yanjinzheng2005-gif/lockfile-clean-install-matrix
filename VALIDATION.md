@@ -10,6 +10,8 @@ Run [32337920436](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-
 
 After the repository became public, workflow-dispatch run [32351116580](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/actions/runs/32351116580) independently reran the same four jobs for commit `8f622f95dca05d403a50390aad19c796ee3a3bba`; all passed. The code between the fixed implementation commit and this public rerun is unchanged. The later commit only corrected public validation documentation.
 
+Final public-main run [32351823218](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/actions/runs/32351823218) and immutable-tag run [32352006359](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/actions/runs/32352006359) both completed successfully for release commit `9371049193fe7fcf69d77138219764c6483f109b`. Each passed Node 20/22/24 release gates and the real Linux cold-install goldens before the v0.1.0 Release and Marketplace listing were published.
+
 ## Local gate
 
 Environment: macOS arm64, Node.js 25.3.0, npm 11.7.0.
@@ -75,4 +77,4 @@ The public receipts again record the exact requested and observed manager versio
 
 Local fake-Docker tests validate orchestration, classification, mutation detection, reports, and safety arguments. The real Linux run closes Docker behavior, manager flags, pinned image, workspace trees, timeout removal, mutation, and red/green oracle execution. It does not prove every repository, OS, registry, or network condition.
 
-External user feedback remains 0. At the time public validation run `32351116580` completed, the repository was public and the release tag, Marketplace listing, and community launch had not yet been performed. Those publication steps do not change the engineering evidence boundary above.
+External user feedback remains 0. The repository is public, [v0.1.0](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/releases/tag/v0.1.0) is the latest immutable Release, and the Action is listed in the [GitHub Marketplace](https://github.com/marketplace/actions/lockfile-clean-install-matrix). Community launch has not yet been performed. Publication status does not change the engineering evidence boundary above.

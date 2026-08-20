@@ -6,7 +6,7 @@ The tool runs the baseline and candidate in separate Linux/amd64 containers, for
 
 ## Status
 
-V0.1 has passed the local release gate, independent review, and both private and public GitHub-hosted Linux Docker validation. The public rerun for commit `8f622f95dca05d403a50390aad19c796ee3a3bba` is [CI run 32351116580](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/actions/runs/32351116580). Exact evidence and limitations are recorded in [VALIDATION.md](VALIDATION.md).
+V0.1.0 is available as a [GitHub Release](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/releases/tag/v0.1.0) and a [GitHub Marketplace Action](https://github.com/marketplace/actions/lockfile-clean-install-matrix). The local release gate, independent review, public-main CI, and immutable-tag CI all pass for release commit `9371049193fe7fcf69d77138219764c6483f109b`. Exact evidence and limitations are recorded in [VALIDATION.md](VALIDATION.md).
 
 ## What V0.1 does
 
