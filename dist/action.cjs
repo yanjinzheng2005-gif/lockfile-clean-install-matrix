@@ -7523,6 +7523,11 @@ var DockerRunner = class {
     this.assertNotInterrupted();
     if (!this.image || !this.hostEnv) throw new EnvironmentError("DockerRunner.prepare must complete before running a leg.");
     await (0, import_promises.mkdir)(options.cacheDir, { recursive: true, mode: 448 });
+    const bootstrapResult = await this.runBootstrapPhase(options, 18e4);
+    this.assertNotInterrupted();
+    if (bootstrapResult.exitCode !== 0 || bootstrapResult.timedOut || bootstrapResult.cleanupError) {
+      return { managerObserved: "", managerResult: bootstrapResult, installResult: null, inventoryResult: null };
+    }
     const versionResult = await this.runManagerPhase(options, "version", 12e4);
     this.assertNotInterrupted();
     const managerObserved = lastNonEmptyLine(versionResult.stdout);
@@ -7537,6 +7542,31 @@ var DockerRunner = class {
     const inventoryResult = await this.runManagerPhase(options, "inventory", Math.min(options.timeoutSeconds * 1e3, 18e4));
     this.assertNotInterrupted();
     return { managerObserved, managerResult: versionResult, installResult, inventoryResult };
+  }
+  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,cacheDir:string}} options @param {number} timeoutMs */
+  async runBootstrapPhase(options, timeoutMs) {
+    const name = `lockfile-matrix-${options.label}-bootstrap-${(0, import_node_crypto.randomBytes)(5).toString("hex")}`;
+    const args = buildDockerRunArgs({
+      name,
+      image: this.image,
+      uid: this.uid,
+      gid: this.gid,
+      cacheDir: options.cacheDir,
+      registry: options.registry,
+      command: bootstrapManagerCommand(options.manager, options.version, options.registry)
+    });
+    this.activeContainers.add(name);
+    const result = await this.execute(this.command, args, {
+      env: this.hostEnv,
+      timeoutMs,
+      maxOutputBytes: 512 * 1024,
+      onTimeout: async () => this.forceRemove(name),
+      signal: this.abortController.signal
+    });
+    if (!result.timedOut) await this.confirmGone(name);
+    if (result.cleanupError) throw new EnvironmentError(`Timed-out manager bootstrap cleanup failed: ${result.cleanupError}`);
+    this.activeContainers.delete(name);
+    return result;
   }
   /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,projectDir:string,cacheDir:string,workspaceProject:boolean}} options @param {'version'|'install'|'inventory'} phase @param {number} timeoutMs */
   async runManagerPhase(options, phase, timeoutMs) {
@@ -7665,20 +7695,19 @@ function buildDockerRunArgs(options) {
     "--tmpfs",
     "/tmp:rw,nosuid,nodev,size=1073741824",
     "--mount",
-    `type=bind,source=${options.projectDir},target=/workspace`,
-    "--mount",
     `type=bind,source=${options.cacheDir},target=/matrix-cache`,
     "--workdir",
-    "/workspace",
+    options.projectDir ? "/workspace" : "/tmp",
     "--label",
     "com.micro-tool-lab.lockfile-matrix=true"
   ];
+  if (options.projectDir) args.splice(args.indexOf("--workdir"), 0, "--mount", `type=bind,source=${options.projectDir},target=/workspace`);
   for (const value of environment) args.push("--env", value);
   args.push(options.image, ...options.command);
   return args;
 }
 function managerCommand(manager, version, phase, registry, options = {}) {
-  const prefix = ["npx", "--yes", "--package", `${manager}@${version}`, "--", manager];
+  const prefix = [`/matrix-cache/manager/node_modules/.bin/${manager}`];
   if (manager === "npm") {
     if (phase === "version") return [...prefix, "--version"];
     if (phase === "install") return [...prefix, "ci", "--ignore-scripts", "--no-audit", "--no-fund", "--cache", "/matrix-cache/project-npm-cache", "--registry", registry];
@@ -7690,6 +7719,22 @@ function managerCommand(manager, version, phase, registry, options = {}) {
     return [...prefix, ...safe, "install", "--frozen-lockfile", "--ignore-scripts", "--store-dir", "/matrix-cache/pnpm-store", "--registry", registry, "--reporter", "append-only"];
   }
   return [...prefix, ...safe, "--config.include-workspace-root=true", "list", "--recursive", "--depth", "Infinity", "--json"];
+}
+function bootstrapManagerCommand(manager, version, registry) {
+  return [
+    "npm",
+    "install",
+    "--prefix",
+    "/matrix-cache/manager",
+    `${manager}@${version}`,
+    "--no-audit",
+    "--no-fund",
+    "--cache",
+    "/matrix-cache/bootstrap-npm",
+    "--registry",
+    registry,
+    manager === "pnpm" ? "--ignore-scripts=false" : "--ignore-scripts"
+  ];
 }
 function dockerHostEnvironment(dockerConfig, dockerHost) {
   const result = { PATH: process.env.PATH, DOCKER_CONFIG: dockerConfig, DOCKER_HOST: dockerHost };
@@ -8487,7 +8532,7 @@ function renderMarkdown(receipt) {
     "",
     "## What this receipt proves",
     "",
-    "It compares two exact versions of the same package manager in separate Linux/amd64 cold-install copies. Lifecycle scripts and pnpm hooks are disabled. The original project is never mounted into a container.",
+    "It compares two exact versions of the same package manager in separate Linux/amd64 cold-install copies. Project lifecycle scripts and pnpm hooks are disabled. The original project is never mounted into a container.",
     "",
     "It does **not** prove application behavior, vulnerability status, license compliance, private-registry compatibility, or network isolation. Containers retain ordinary outbound network access so the public npm registry can be reached.",
     "",
@@ -8513,6 +8558,7 @@ function renderMarkdown(receipt) {
     `- Sensitive files omitted: ${receipt.preflight.omittedSensitiveFiles.length}`,
     "- Container: non-root, read-only root filesystem, all Linux capabilities dropped, no-new-privileges, bounded CPU/memory/PIDs.",
     "- No host HOME, credentials, SSH material, Git config, Docker socket, or parent environment is mounted or forwarded.",
+    "- Exact package managers are bootstrapped in a separate container with no project mount. pnpm package bootstrap scripts may run there because pnpm 12 uses them to install its native binary; project dependency scripts remain disabled.",
     "",
     "## Reproduce",
     "",
@@ -8646,7 +8692,14 @@ async function runMatrix(config, options = {}) {
         nodeVersion: config.nodeVersion,
         registry: config.registry
       },
-      environment: { image },
+      environment: {
+        image,
+        managerBootstrap: {
+          projectMounted: false,
+          projectLifecycleScripts: "disabled",
+          pnpmPackageBootstrapScripts: "allowed-in-projectless-container"
+        }
+      },
       preflight: initialPreflight,
       baseline,
       candidate,

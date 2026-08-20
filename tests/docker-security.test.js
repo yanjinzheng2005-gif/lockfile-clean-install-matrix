@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildDockerRunArgs, DockerRunner, managerCommand } from '../src/docker.js';
+import { bootstrapManagerCommand, buildDockerRunArgs, DockerRunner, managerCommand } from '../src/docker.js';
 import { processResult } from './helpers.js';
 import { runProcess } from '../src/process.js';
 import { cleanupRunRoot, createRunRoot } from '../src/workspace.js';
@@ -17,11 +17,15 @@ test('Docker argv enforces the V0.1 isolation boundary', () => {
 test('manager argv fixes exact versions and disables scripts and pnpm hooks', () => {
   const npm = managerCommand('npm', '11.14.1', 'install', 'https://registry.npmjs.org').join(' ');
   const pnpm = managerCommand('pnpm', '11.17.0', 'install', 'https://registry.npmjs.org').join(' ');
+  const npmBootstrap = bootstrapManagerCommand('npm', '11.14.1', 'https://registry.npmjs.org').join(' ');
+  const pnpmBootstrap = bootstrapManagerCommand('pnpm', '12.0.0-beta.0', 'https://registry.npmjs.org').join(' ');
   const pnpmInventory = managerCommand('pnpm', '11.17.0', 'inventory', 'https://registry.npmjs.org').join(' ');
   const npmWorkspaceInventory = managerCommand('npm', '11.14.1', 'inventory', 'https://registry.npmjs.org', { workspaceProject: true }).join(' ');
-  assert.ok(npm.includes('npm@11.14.1'));
+  assert.ok(npmBootstrap.includes('npm@11.14.1'));
+  assert.ok(npmBootstrap.includes('--ignore-scripts'));
   assert.ok(npm.includes('--ignore-scripts'));
-  assert.ok(pnpm.includes('pnpm@11.17.0'));
+  assert.ok(pnpmBootstrap.includes('pnpm@12.0.0-beta.0'));
+  assert.ok(pnpmBootstrap.includes('--ignore-scripts=false'));
   assert.ok(pnpm.includes('--config.ignore-pnpmfile=true'));
   assert.ok(pnpm.includes('--config.manage-package-manager-versions=false'));
   assert.ok(pnpm.includes('--frozen-lockfile'));
@@ -30,6 +34,17 @@ test('manager argv fixes exact versions and disables scripts and pnpm hooks', ()
   assert.ok(npm.includes('/matrix-cache/project-npm-cache'));
   assert.ok(npmWorkspaceInventory.includes('--workspaces'));
   assert.ok(npmWorkspaceInventory.includes('--include-workspace-root'));
+});
+
+test('manager bootstrap container never mounts the project', () => {
+  const args = buildDockerRunArgs({
+    name: 'bootstrap', image: 'sha256:fixture', uid: 1000, gid: 1000,
+    cacheDir: '/tmp/run/cache', registry: 'https://registry.npmjs.org',
+    command: bootstrapManagerCommand('pnpm', '12.0.0-beta.0', 'https://registry.npmjs.org'),
+  });
+  assert.equal(args.filter((value) => value.startsWith('type=bind')).length, 1);
+  assert.equal(args.some((value) => value.includes('/workspace')), false);
+  assert.ok(args.includes('/tmp'));
 });
 
 test('runProcess waits for timeout cleanup before resolving', async () => {

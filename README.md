@@ -15,7 +15,8 @@ V0.1 is a validation candidate. The local release gate passes, but the real Linu
 - Exact Node image tag, Linux/amd64 only.
 - Separate project copy, manager-bootstrap cache, project cache/store, temporary directory, and container for each leg.
 - `npm ci` or `pnpm install --frozen-lockfile`.
-- Lifecycle scripts disabled in both CLI arguments and container environment.
+- Project lifecycle scripts disabled in both CLI arguments and container environment.
+- Exact package managers bootstrapped in a separate projectless container. pnpm's own package bootstrap script is allowed there because pnpm 12 uses it to install its native binary; that container receives no project mount or host secrets.
 - pnpm file hooks refused at preflight and disabled again at execution.
 - Install success, deterministic failure, timeout, protected-file mutation, network uncertainty, logical dependency inventory, and bin-shim comparison.
 - JSON and Markdown receipts from the same result object.
@@ -28,6 +29,7 @@ V0.1 is a validation candidate. The local release gate passes, but the real Linu
 - It does not support private registries, repository `.npmrc` files, Git dependencies, source symlinks, custom pnpm hooks, pnpm `configDependencies`/`packageManagerDependencies`, repository-controlled runtime switching, or pnpm workspace registry routing.
 - It does not promise full network isolation. The container retains ordinary outbound access so the public npm registry and its tarballs can be reached.
 - It does not make Docker a perfect sandbox. Do not run untrusted pull-request code on a persistent self-hosted runner.
+- It trusts the exact public npm/pnpm manager package enough to bootstrap it inside a projectless restricted container. A registry compromise remains a supply-chain risk, but the bootstrap cannot read the tested project or host credentials.
 
 ## Requirements
 

@@ -35,7 +35,7 @@ const NETWORK_ERROR = /\b(?:EAI_AGAIN|ENOTFOUND|ECONNRESET|ECONNREFUSED|ECONNABO
  * @property {string} toolVersion
  * @property {string} generatedAt
  * @property {{manager:'npm'|'pnpm',baselineVersion:string,candidateVersion:string,nodeVersion:string,registry:string}} config
- * @property {{image:{reference:string,id:string,repoDigest:string,platform:string,dockerVersion:string,containerUser:string}}} environment
+ * @property {{image:{reference:string,id:string,repoDigest:string,platform:string,dockerVersion:string,containerUser:string},managerBootstrap:{projectMounted:false,projectLifecycleScripts:'disabled',pnpmPackageBootstrapScripts:'allowed-in-projectless-container'}}} environment
  * @property {import('./preflight.js').PreflightResult} preflight
  * @property {LegReceipt} baseline
  * @property {LegReceipt} candidate
@@ -88,7 +88,14 @@ export async function runMatrix(config, options = {}) {
         nodeVersion: config.nodeVersion,
         registry: config.registry,
       },
-      environment: { image },
+      environment: {
+        image,
+        managerBootstrap: {
+          projectMounted: false,
+          projectLifecycleScripts: 'disabled',
+          pnpmPackageBootstrapScripts: 'allowed-in-projectless-container',
+        },
+      },
       preflight: initialPreflight,
       baseline,
       candidate,

@@ -23,7 +23,7 @@
     },
     "environment": {
       "type": "object",
-      "required": ["image"],
+      "required": ["image", "managerBootstrap"],
       "properties": {
         "image": {
           "type": "object",
@@ -35,6 +35,16 @@
             "platform": { "const": "linux/amd64" },
             "dockerVersion": { "type": "string" },
             "containerUser": { "type": "string" }
+          }
+        },
+        "managerBootstrap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["projectMounted", "projectLifecycleScripts", "pnpmPackageBootstrapScripts"],
+          "properties": {
+            "projectMounted": { "const": false },
+            "projectLifecycleScripts": { "const": "disabled" },
+            "pnpmPackageBootstrapScripts": { "const": "allowed-in-projectless-container" }
           }
         }
       }
