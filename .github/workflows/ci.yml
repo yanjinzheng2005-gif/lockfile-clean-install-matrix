@@ -68,6 +68,10 @@ jobs:
         run: npm run fixture:pnpm:pass
       - name: Assert pnpm no-regression receipt
         run: node scripts/assert-receipt.mjs fixtures/pnpm-pass/lockfile-matrix-results/lockfile-matrix-report.json NO_REGRESSION PASS PASS
+      - name: Run pnpm 12 Linux CA regression golden
+        run: npm run fixture:pnpm:regression
+      - name: Assert pnpm 12 Linux CA regression receipt
+        run: node scripts/assert-receipt.mjs fixtures/pnpm-pass/lockfile-matrix-regression-results/lockfile-matrix-report.json REGRESSION PASS INSTALL_FAILED
       - name: Run public npm regression golden
         run: npm run fixture:npm:regression
       - name: Assert public npm regression receipt
@@ -78,7 +82,7 @@ jobs:
         with:
           name: linux-cold-install-receipts
           path: |
-            fixtures/*/lockfile-matrix-results/
+            fixtures/*/lockfile-matrix*-results/
             validation-results/
           if-no-files-found: warn
           retention-days: 7

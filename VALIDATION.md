@@ -13,15 +13,18 @@ Real Linux Docker goldens: **partially proven, not yet green as a complete run**
 Environment: macOS arm64, Node.js 25.3.0, npm 11.7.0.
 
 - Strict JS type checking: PASS.
-- JavaScript syntax scan: PASS across 34 source, script, and test files.
-- Automated tests: 39/39 PASS.
-- Test-presence guard: PASS, 5 files and 31 static declarations (parameterized tests expand to 39 runtime cases).
+- JavaScript syntax scan: PASS across 35 source, script, and test files.
+- Automated tests: 40/40 PASS.
+- Test-presence guard: PASS, 5 files and 32 static declarations (parameterized tests expand to 40 runtime cases).
 - Result branches covered: no regression, deterministic candidate failure, network inconclusive, timeout, protected-file mutation, and logical-tree difference.
 - Path traversal, output symlink escape, source symlink, `.npmrc`, credential URL, nested override Git spec, and out-of-root local dependency rejection: PASS.
 - Secret/path redaction and workflow-command escaping: PASS.
 - Non-root/read-only/cap-drop/no-new-privileges/resource-bound Docker argv assertions: PASS.
 - npm/pnpm ignore-scripts, pnpm ignore-pnpmfile, recursive workspace-root inventory, and separate bootstrap/project-cache assertions: PASS.
 - Projectless exact-manager bootstrap: PASS in local argv/mount tests; pnpm's own bootstrap script is allowed only in that projectless container.
+- Manager/project cache separation and read-only manager mount during project phases: PASS; pnpm path-relocation settings are refused.
+- Recursive/self-referential YAML alias handling: controlled BoundaryError, not stack overflow.
+- package.json versus package-lock root metadata: PASS, including the CJS bin path.
 - npm shrinkwrap priority, dual-lock rejection, escaped JSON URL, structured pnpm YAML, config/package-manager dependencies, duplicate YAML keys, private registry routing, and pnpm security-floor assertions: PASS.
 - Timeout cleanup ordering and tool-owned temporary-directory deletion guard: PASS.
 - JSON/Markdown common verdict and original-source unchanged assertions: PASS.

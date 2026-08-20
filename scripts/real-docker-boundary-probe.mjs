@@ -53,7 +53,7 @@ try {
     projectDir,
     cacheDir,
     registry: 'https://registry.npmjs.org',
-    command: ['node', '-e', `require('node:fs').writeFileSync('package-lock.json', '{"mutated":true}\\n')`],
+    command: ['node', '-e', `const fs=require('node:fs');if(fs.statSync('/etc/ssl/certs/ca-certificates.crt').size<1024)process.exit(2);fs.writeFileSync('package-lock.json', '{"mutated":true}\\n')`],
   });
   const mutationRun = await runner.execute(runner.command, mutationArgs, {
     env: runner.hostEnv,
@@ -72,7 +72,7 @@ try {
     schemaVersion: 1,
     image,
     hang: { timedOut: hang.timedOut, cleanupError: hang.cleanupError, containerRemoved: true },
-    mutation: { exitCode: mutationRun.exitCode, protectedFileDiff: mutationDiff },
+    mutation: { exitCode: mutationRun.exitCode, systemCaBundlePresent: true, protectedFileDiff: mutationDiff },
   }, null, 2)}\n`);
   console.log('Real Docker timeout/removal and protected-file mutation probe: PASS');
 } finally {

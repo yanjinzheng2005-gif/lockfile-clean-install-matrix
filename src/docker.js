@@ -75,29 +75,33 @@ export class DockerRunner {
   async runLeg(options) {
     this.assertNotInterrupted();
     if (!this.image || !this.hostEnv) throw new EnvironmentError('DockerRunner.prepare must complete before running a leg.');
-    await mkdir(options.cacheDir, { recursive: true, mode: 0o700 });
-    const bootstrapResult = await this.runBootstrapPhase(options, 180000);
+    const managerDir = path.join(options.cacheDir, 'manager');
+    const projectCacheDir = path.join(options.cacheDir, 'project-cache');
+    await mkdir(managerDir, { recursive: true, mode: 0o700 });
+    await mkdir(projectCacheDir, { recursive: true, mode: 0o700 });
+    const bootstrapResult = await this.runBootstrapPhase({ ...options, managerDir }, 180000);
     this.assertNotInterrupted();
     if (bootstrapResult.exitCode !== 0 || bootstrapResult.timedOut || bootstrapResult.cleanupError) {
       return { managerObserved: '', managerResult: bootstrapResult, installResult: null, inventoryResult: null };
     }
-    const versionResult = await this.runManagerPhase(options, 'version', 120000);
+    const projectOptions = { ...options, managerDir, cacheDir: projectCacheDir };
+    const versionResult = await this.runManagerPhase(projectOptions, 'version', 120000);
     this.assertNotInterrupted();
     const managerObserved = lastNonEmptyLine(versionResult.stdout);
     if (versionResult.exitCode !== 0 || versionResult.timedOut || managerObserved !== options.version) {
       return { managerObserved, managerResult: versionResult, installResult: null, inventoryResult: null };
     }
-    const installResult = await this.runManagerPhase(options, 'install', options.timeoutSeconds * 1000);
+    const installResult = await this.runManagerPhase(projectOptions, 'install', options.timeoutSeconds * 1000);
     this.assertNotInterrupted();
     if (installResult.exitCode !== 0 || installResult.timedOut || installResult.cleanupError) {
       return { managerObserved, managerResult: versionResult, installResult, inventoryResult: null };
     }
-    const inventoryResult = await this.runManagerPhase(options, 'inventory', Math.min(options.timeoutSeconds * 1000, 180000));
+    const inventoryResult = await this.runManagerPhase(projectOptions, 'inventory', Math.min(options.timeoutSeconds * 1000, 180000));
     this.assertNotInterrupted();
     return { managerObserved, managerResult: versionResult, installResult, inventoryResult };
   }
 
-  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,cacheDir:string}} options @param {number} timeoutMs */
+  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,managerDir:string}} options @param {number} timeoutMs */
   async runBootstrapPhase(options, timeoutMs) {
     const name = `lockfile-matrix-${options.label}-bootstrap-${randomBytes(5).toString('hex')}`;
     const args = buildDockerRunArgs({
@@ -105,7 +109,7 @@ export class DockerRunner {
       image: this.image,
       uid: this.uid,
       gid: this.gid,
-      cacheDir: options.cacheDir,
+      managerDir: options.managerDir,
       registry: options.registry,
       command: bootstrapManagerCommand(options.manager, options.version, options.registry),
     });
@@ -123,7 +127,7 @@ export class DockerRunner {
     return result;
   }
 
-  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,projectDir:string,cacheDir:string,workspaceProject:boolean}} options @param {'version'|'install'|'inventory'} phase @param {number} timeoutMs */
+  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,projectDir:string,cacheDir:string,managerDir:string,workspaceProject:boolean}} options @param {'version'|'install'|'inventory'} phase @param {number} timeoutMs */
   async runManagerPhase(options, phase, timeoutMs) {
     this.assertNotInterrupted();
     const name = `lockfile-matrix-${options.label}-${phase}-${randomBytes(5).toString('hex')}`;
@@ -135,6 +139,7 @@ export class DockerRunner {
       gid: this.gid,
       projectDir: options.projectDir,
       cacheDir: options.cacheDir,
+      managerDir: options.managerDir,
       registry: options.registry,
       command,
     });
@@ -201,7 +206,7 @@ export class DockerRunner {
 }
 
 /**
- * @param {{name:string,image:string,uid:number,gid:number,projectDir?:string,cacheDir:string,registry:string,command:string[]}} options
+ * @param {{name:string,image:string,uid:number,gid:number,projectDir?:string,cacheDir?:string,managerDir?:string,registry:string,command:string[]}} options
  */
 export function buildDockerRunArgs(options) {
   const environment = [
@@ -217,7 +222,7 @@ export function buildDockerRunArgs(options) {
     'NPM_CONFIG_UPDATE_NOTIFIER=false',
     'NPM_CONFIG_USERCONFIG=/tmp/empty-npmrc',
     'NPM_CONFIG_GLOBALCONFIG=/tmp/empty-global-npmrc',
-    'NPM_CONFIG_CACHE=/matrix-cache/bootstrap-npm',
+    `NPM_CONFIG_CACHE=${options.projectDir ? '/matrix-cache/npm-meta' : '/matrix-manager/bootstrap-npm'}`,
     'PNPM_HOME=/tmp/pnpm-home',
     'XDG_CACHE_HOME=/matrix-cache/xdg-cache',
     'XDG_CONFIG_HOME=/tmp/xdg-config',
@@ -233,10 +238,11 @@ export function buildDockerRunArgs(options) {
     '--pids-limit', '256', '--memory', '2g', '--cpus', '2',
     '--network', 'bridge', '--ipc', 'none', '--init', '--stop-timeout', '2',
     '--tmpfs', '/tmp:rw,nosuid,nodev,size=1073741824',
-    '--mount', `type=bind,source=${options.cacheDir},target=/matrix-cache`,
     '--workdir', options.projectDir ? '/workspace' : '/tmp',
     '--label', 'com.micro-tool-lab.lockfile-matrix=true',
   ];
+  if (options.managerDir) args.splice(args.indexOf('--workdir'), 0, '--mount', `type=bind,source=${options.managerDir},target=/matrix-manager${options.projectDir ? ',readonly' : ''}`);
+  if (options.cacheDir) args.splice(args.indexOf('--workdir'), 0, '--mount', `type=bind,source=${options.cacheDir},target=/matrix-cache`);
   if (options.projectDir) args.splice(args.indexOf('--workdir'), 0, '--mount', `type=bind,source=${options.projectDir},target=/workspace`);
   for (const value of environment) args.push('--env', value);
   args.push(options.image, ...options.command);
@@ -245,7 +251,7 @@ export function buildDockerRunArgs(options) {
 
 /** @param {'npm'|'pnpm'} manager @param {string} version @param {'version'|'install'|'inventory'} phase @param {string} registry @param {{workspaceProject?:boolean}} [options] */
 export function managerCommand(manager, version, phase, registry, options = {}) {
-  const prefix = [`/matrix-cache/manager/node_modules/.bin/${manager}`];
+  const prefix = [`/matrix-manager/node_modules/.bin/${manager}`];
   if (manager === 'npm') {
     if (phase === 'version') return [...prefix, '--version'];
     if (phase === 'install') return [...prefix, 'ci', '--ignore-scripts', '--no-audit', '--no-fund', '--cache', '/matrix-cache/project-npm-cache', '--registry', registry];
@@ -262,8 +268,8 @@ export function managerCommand(manager, version, phase, registry, options = {}) 
 /** @param {'npm'|'pnpm'} manager @param {string} version @param {string} registry */
 export function bootstrapManagerCommand(manager, version, registry) {
   return [
-    'npm', 'install', '--prefix', '/matrix-cache/manager', `${manager}@${version}`,
-    '--no-audit', '--no-fund', '--cache', '/matrix-cache/bootstrap-npm', '--registry', registry,
+    'npm', 'install', '--prefix', '/matrix-manager', `${manager}@${version}`,
+    '--no-audit', '--no-fund', '--cache', '/matrix-manager/bootstrap-npm', '--registry', registry,
     manager === 'pnpm' ? '--ignore-scripts=false' : '--ignore-scripts',
   ];
 }

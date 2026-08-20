@@ -19,6 +19,17 @@ const PNPM_EXECUTION_KEYS = new Set([
   'usenodeversion',
   'executionenv',
 ]);
+const PNPM_PATH_KEYS = new Set([
+  'modulesdir',
+  'virtualstoredir',
+  'globalvirtualstoredir',
+  'storedir',
+  'cachedir',
+  'statedir',
+  'lockfiledir',
+  'globaldir',
+  'globalbindir',
+]);
 const PNPM_REGISTRY_KEYS = new Set([
   'registry',
   'registries',
@@ -194,8 +205,12 @@ async function inspectLockfile(file, manager, root, problems) {
   }
 }
 
-/** @param {unknown} value @param {string} base @param {string} root @param {string} label @param {string[]} problems */
-function inspectStructuredDependencyData(value, base, root, label, problems) {
+/** @param {unknown} value @param {string} base @param {string} root @param {string} label @param {string[]} problems @param {{active:WeakSet<object>,count:number}} [state] @param {number} [depth] */
+function inspectStructuredDependencyData(value, base, root, label, problems, state = { active: new WeakSet(), count: 0 }, depth = 0) {
+  if (depth > 256 || state.count > 100000) {
+    problems.push(`${label} exceeds the supported structured-data depth or node count.`);
+    return;
+  }
   if (typeof value === 'string') {
     if (/^(?:file|link):/.test(value)) inspectLocalPath(value, base, root, label, problems);
     else if (/^(?:git(?:\+[^:]+)?:|git@|github:|gitlab:|bitbucket:|ssh:)/i.test(value)) problems.push(`${label} contains a Git/SSH dependency, which V0.1 refuses.`);
@@ -203,11 +218,19 @@ function inspectStructuredDependencyData(value, base, root, label, problems) {
     return;
   }
   if (Array.isArray(value)) {
-    for (const item of value) inspectStructuredDependencyData(item, base, root, label, problems);
+    if (state.active.has(value)) { problems.push(`${label} contains a recursive YAML alias.`); return; }
+    state.active.add(value);
+    state.count += 1;
+    for (const item of value) inspectStructuredDependencyData(item, base, root, label, problems, state, depth + 1);
+    state.active.delete(value);
   } else if (value && typeof value === 'object') {
+    if (state.active.has(value)) { problems.push(`${label} contains a recursive YAML alias.`); return; }
+    state.active.add(value);
+    state.count += 1;
     const record = /** @type {Record<string,unknown>} */ (value);
     if (record.link === true && typeof record.resolved === 'string') inspectLocalPath(record.resolved, base, root, label, problems);
-    for (const item of Object.values(value)) inspectStructuredDependencyData(item, base, root, label, problems);
+    for (const item of Object.values(value)) inspectStructuredDependencyData(item, base, root, label, problems, state, depth + 1);
+    state.active.delete(value);
   }
 }
 
@@ -228,27 +251,41 @@ async function inspectPnpmYaml(file, label, root, problems, inspectRegistryKeys)
     return;
   }
   for (const document of documents) {
-    const value = document.toJS({ maxAliasCount: 100 });
+    let value;
+    try { value = document.toJS({ maxAliasCount: 100 }); } catch { problems.push(`${label} exceeds the supported YAML alias boundary.`); continue; }
     inspectStructuredDependencyData(value, path.dirname(file), root, label, problems);
     inspectForbiddenPnpmKeys(value, label, problems, inspectRegistryKeys);
   }
 }
 
-/** @param {unknown} value @param {string} label @param {string[]} problems @param {boolean} inspectRegistryKeys @param {string[]} [parents] */
-function inspectForbiddenPnpmKeys(value, label, problems, inspectRegistryKeys, parents = []) {
+/** @param {unknown} value @param {string} label @param {string[]} problems @param {boolean} inspectRegistryKeys @param {string[]} [parents] @param {{active:WeakSet<object>,count:number}} [state] @param {number} [depth] */
+function inspectForbiddenPnpmKeys(value, label, problems, inspectRegistryKeys, parents = [], state = { active: new WeakSet(), count: 0 }, depth = 0) {
+  if (depth > 256 || state.count > 100000) {
+    problems.push(`${label} exceeds the supported pnpm configuration depth or node count.`);
+    return;
+  }
   if (Array.isArray(value)) {
-    for (const item of value) inspectForbiddenPnpmKeys(item, label, problems, inspectRegistryKeys, parents);
+    if (state.active.has(value)) { problems.push(`${label} contains a recursive YAML alias.`); return; }
+    state.active.add(value);
+    state.count += 1;
+    for (const item of value) inspectForbiddenPnpmKeys(item, label, problems, inspectRegistryKeys, parents, state, depth + 1);
+    state.active.delete(value);
     return;
   }
   if (!value || typeof value !== 'object') return;
+  if (state.active.has(value)) { problems.push(`${label} contains a recursive YAML alias.`); return; }
+  state.active.add(value);
+  state.count += 1;
   for (const [key, item] of Object.entries(value)) {
     const normalized = key.replace(/[-_.]/g, '').toLowerCase();
-    const executionKey = PNPM_EXECUTION_KEYS.has(normalized);
     const insideDependencyMap = parents.some((parent) => /^(?:dependencies|devdependencies|optionaldependencies|packages|snapshots|catalogs)$/.test(parent));
+    const executionKey = !insideDependencyMap && PNPM_EXECUTION_KEYS.has(normalized);
+    const pathKey = !insideDependencyMap && PNPM_PATH_KEYS.has(normalized);
     const registryKey = inspectRegistryKeys && !insideDependencyMap && (PNPM_REGISTRY_KEYS.has(normalized) || /:registry$/i.test(key));
-    if (executionKey || registryKey) problems.push(`${label} contains forbidden pnpm configuration key: ${key}`);
-    inspectForbiddenPnpmKeys(item, `${label}.${key}`, problems, inspectRegistryKeys, [...parents, normalized]);
+    if (executionKey || pathKey || registryKey) problems.push(`${label} contains forbidden pnpm configuration key: ${key}`);
+    inspectForbiddenPnpmKeys(item, `${label}.${key}`, problems, inspectRegistryKeys, [...parents, normalized], state, depth + 1);
   }
+  state.active.delete(value);
 }
 
 /** @param {string} value @param {string} label @param {string[]} problems */

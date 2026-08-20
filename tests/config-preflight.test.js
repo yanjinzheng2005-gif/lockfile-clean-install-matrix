@@ -113,12 +113,13 @@ test('rejects pnpm configDependencies, package-manager lock metadata, and worksp
   configJson.candidateVersion = '12.0.0-beta.0';
   await writeFile(fixture.configPath, JSON.stringify(configJson));
   await rm(path.join(fixture.project, 'package-lock.json'));
-  await writeFile(path.join(fixture.project, 'pnpm-workspace.yaml'), 'packages:\n  - .\nconfigDependencies:\n  pacquet: 0.2.2\nregistries:\n  private: https://evil.example/\n');
+  await writeFile(path.join(fixture.project, 'pnpm-workspace.yaml'), 'packages:\n  - .\nconfigDependencies:\n  pacquet: 0.2.2\nregistries:\n  private: https://evil.example/\nmodulesDir: /matrix-manager/node_modules\n');
   await writeFile(path.join(fixture.project, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\nimporters:\n  .:\n    packageManagerDependencies:\n      pnpm:\n        specifier: 9.3.0\n        version: 9.3.0\n");
   const config = await loadConfig(fixture.configPath, { allowedRoot: fixture.root });
   await assert.rejects(preflight(config), (error) => error instanceof BoundaryError
     && error.details.some((detail) => detail.includes('configDependencies'))
     && error.details.some((detail) => detail.includes('registries'))
+    && error.details.some((detail) => detail.includes('modulesDir'))
     && error.details.some((detail) => detail.includes('packageManagerDependencies')));
 });
 
@@ -144,4 +145,18 @@ test('rejects duplicate pnpm YAML keys instead of choosing a parser-dependent wi
   await writeFile(path.join(fixture.project, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\nimporters: {}\nimporters:\n  .: {}\n");
   const config = await loadConfig(fixture.configPath, { allowedRoot: fixture.root });
   await assert.rejects(preflight(config), (error) => error instanceof BoundaryError && error.details.some((detail) => detail.includes('not valid YAML')));
+});
+
+test('rejects recursive pnpm YAML aliases without a stack overflow', async (t) => {
+  const fixture = await createNpmFixture();
+  t.after(() => rm(fixture.root, { recursive: true, force: true }));
+  const configJson = JSON.parse(await (await import('node:fs/promises')).readFile(fixture.configPath, 'utf8'));
+  configJson.manager = 'pnpm';
+  configJson.baselineVersion = '11.17.0';
+  configJson.candidateVersion = '11.22.0';
+  await writeFile(fixture.configPath, JSON.stringify(configJson));
+  await rm(path.join(fixture.project, 'package-lock.json'));
+  await writeFile(path.join(fixture.project, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\nimporters: {}\ncycle: &cycle\n  self: *cycle\n");
+  const config = await loadConfig(fixture.configPath, { allowedRoot: fixture.root });
+  await assert.rejects(preflight(config), (error) => error instanceof BoundaryError && error.details.some((detail) => detail.includes('recursive YAML alias')));
 });

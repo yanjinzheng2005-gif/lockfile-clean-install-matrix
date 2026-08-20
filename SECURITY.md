@@ -15,7 +15,7 @@ The input repository and dependency metadata may be malformed or hostile. V0.1 t
 - uses a read-only container root filesystem, drops all capabilities, sets no-new-privileges, bounds PIDs/memory/CPU, and mounts only the current leg's copied project and cold cache;
 - does not mount the host home directory, SSH/AWS/Docker credential directories, Git credentials, Docker socket, parent environment, or secrets;
 - forces `--ignore-scripts` for the tested project; pnpm also forces `--config.ignore-pnpmfile=true`, disables project package-manager redirection, and includes the workspace root in recursive inventory;
-- bootstraps the exact manager in a separate container that mounts only a temporary manager cache. npm bootstrap scripts stay disabled; pnpm package bootstrap scripts may run because pnpm 12 installs its native binary that way. The tested project is never mounted during bootstrap;
+- bootstraps the exact manager in a separate container that mounts only a temporary manager directory. npm bootstrap scripts stay disabled; pnpm package bootstrap scripts may run because pnpm 12 installs its native binary that way. The tested project is never mounted during bootstrap. Later project phases mount the manager directory read-only and use a separate writable cache/store;
 - force-removes and re-inspects timed-out containers before returning;
 - recursively redacts reports and escapes workflow-command-shaped log lines.
 
@@ -27,6 +27,7 @@ The input repository and dependency metadata may be malformed or hostile. V0.1 t
 - Public registry packages can change at mutable URLs despite lockfile integrity controls. The receipt records the image digest and exact manager versions but cannot make third-party infrastructure deterministic.
 - V0.1 deliberately refuses `.npmrc`, private registries, source symlinks, and custom pnpm hooks instead of silently changing their semantics.
 - pnpm versions below 10.34.2 or 11.5.3 in their respective major lines are refused. Repository `configDependencies` and `packageManagerDependencies` are refused even on patched versions because V0.1 does not need those execution paths.
+- Repository-controlled pnpm path relocation (`modulesDir`, virtual/global store, cache/state, lockfile/global/bin directories) is refused so project materialization cannot overwrite the read-only manager boundary.
 
 ## GitHub Actions
 

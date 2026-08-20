@@ -1,6 +1,6 @@
 node_modules/
 lockfile-matrix-results/
-fixtures/**/lockfile-matrix-results/
+fixtures/**/lockfile-matrix*-results/
 *.log
 validation-results/
 .DS_Store

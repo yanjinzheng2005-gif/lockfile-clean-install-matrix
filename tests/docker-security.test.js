@@ -7,11 +7,12 @@ import { cleanupRunRoot, createRunRoot } from '../src/workspace.js';
 import { installInterruptionHandlers } from '../src/signals.js';
 
 test('Docker argv enforces the V0.1 isolation boundary', () => {
-  const args = buildDockerRunArgs({ name: 'fixture', image: 'node:24.16.0-bookworm-slim', uid: 1000, gid: 1000, projectDir: '/tmp/run/project', cacheDir: '/tmp/run/cache', registry: 'https://registry.npmjs.org', command: ['node', '--version'] });
+  const args = buildDockerRunArgs({ name: 'fixture', image: 'node:24.16.0-bookworm-slim', uid: 1000, gid: 1000, projectDir: '/tmp/run/project', cacheDir: '/tmp/run/cache', managerDir: '/tmp/run/manager', registry: 'https://registry.npmjs.org', command: ['node', '--version'] });
   const joined = args.join(' ');
   for (const required of ['--read-only', '--cap-drop ALL', 'no-new-privileges:true', '--network bridge', '--user 1000:1000', 'NPM_CONFIG_IGNORE_SCRIPTS=true']) assert.ok(joined.includes(required), required);
   for (const forbidden of ['--privileged', '--network host', 'docker.sock', '--env-file', 'GITHUB_TOKEN', 'process.env']) assert.equal(joined.includes(forbidden), false, forbidden);
-  assert.equal(args.filter((value) => value.startsWith('type=bind')).length, 2);
+  assert.equal(args.filter((value) => value.startsWith('type=bind')).length, 3);
+  assert.ok(args.some((value) => value === 'type=bind,source=/tmp/run/manager,target=/matrix-manager,readonly'));
 });
 
 test('manager argv fixes exact versions and disables scripts and pnpm hooks', () => {
@@ -39,10 +40,11 @@ test('manager argv fixes exact versions and disables scripts and pnpm hooks', ()
 test('manager bootstrap container never mounts the project', () => {
   const args = buildDockerRunArgs({
     name: 'bootstrap', image: 'sha256:fixture', uid: 1000, gid: 1000,
-    cacheDir: '/tmp/run/cache', registry: 'https://registry.npmjs.org',
+    managerDir: '/tmp/run/manager', registry: 'https://registry.npmjs.org',
     command: bootstrapManagerCommand('pnpm', '12.0.0-beta.0', 'https://registry.npmjs.org'),
   });
   assert.equal(args.filter((value) => value.startsWith('type=bind')).length, 1);
+  assert.ok(args.some((value) => value === 'type=bind,source=/tmp/run/manager,target=/matrix-manager'));
   assert.equal(args.some((value) => value.includes('/workspace')), false);
   assert.ok(args.includes('/tmp'));
 });

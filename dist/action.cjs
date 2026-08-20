@@ -7522,28 +7522,32 @@ var DockerRunner = class {
   async runLeg(options) {
     this.assertNotInterrupted();
     if (!this.image || !this.hostEnv) throw new EnvironmentError("DockerRunner.prepare must complete before running a leg.");
-    await (0, import_promises.mkdir)(options.cacheDir, { recursive: true, mode: 448 });
-    const bootstrapResult = await this.runBootstrapPhase(options, 18e4);
+    const managerDir = import_node_path.default.join(options.cacheDir, "manager");
+    const projectCacheDir = import_node_path.default.join(options.cacheDir, "project-cache");
+    await (0, import_promises.mkdir)(managerDir, { recursive: true, mode: 448 });
+    await (0, import_promises.mkdir)(projectCacheDir, { recursive: true, mode: 448 });
+    const bootstrapResult = await this.runBootstrapPhase({ ...options, managerDir }, 18e4);
     this.assertNotInterrupted();
     if (bootstrapResult.exitCode !== 0 || bootstrapResult.timedOut || bootstrapResult.cleanupError) {
       return { managerObserved: "", managerResult: bootstrapResult, installResult: null, inventoryResult: null };
     }
-    const versionResult = await this.runManagerPhase(options, "version", 12e4);
+    const projectOptions = { ...options, managerDir, cacheDir: projectCacheDir };
+    const versionResult = await this.runManagerPhase(projectOptions, "version", 12e4);
     this.assertNotInterrupted();
     const managerObserved = lastNonEmptyLine(versionResult.stdout);
     if (versionResult.exitCode !== 0 || versionResult.timedOut || managerObserved !== options.version) {
       return { managerObserved, managerResult: versionResult, installResult: null, inventoryResult: null };
     }
-    const installResult = await this.runManagerPhase(options, "install", options.timeoutSeconds * 1e3);
+    const installResult = await this.runManagerPhase(projectOptions, "install", options.timeoutSeconds * 1e3);
     this.assertNotInterrupted();
     if (installResult.exitCode !== 0 || installResult.timedOut || installResult.cleanupError) {
       return { managerObserved, managerResult: versionResult, installResult, inventoryResult: null };
     }
-    const inventoryResult = await this.runManagerPhase(options, "inventory", Math.min(options.timeoutSeconds * 1e3, 18e4));
+    const inventoryResult = await this.runManagerPhase(projectOptions, "inventory", Math.min(options.timeoutSeconds * 1e3, 18e4));
     this.assertNotInterrupted();
     return { managerObserved, managerResult: versionResult, installResult, inventoryResult };
   }
-  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,cacheDir:string}} options @param {number} timeoutMs */
+  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,managerDir:string}} options @param {number} timeoutMs */
   async runBootstrapPhase(options, timeoutMs) {
     const name = `lockfile-matrix-${options.label}-bootstrap-${(0, import_node_crypto.randomBytes)(5).toString("hex")}`;
     const args = buildDockerRunArgs({
@@ -7551,7 +7555,7 @@ var DockerRunner = class {
       image: this.image,
       uid: this.uid,
       gid: this.gid,
-      cacheDir: options.cacheDir,
+      managerDir: options.managerDir,
       registry: options.registry,
       command: bootstrapManagerCommand(options.manager, options.version, options.registry)
     });
@@ -7568,7 +7572,7 @@ var DockerRunner = class {
     this.activeContainers.delete(name);
     return result;
   }
-  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,projectDir:string,cacheDir:string,workspaceProject:boolean}} options @param {'version'|'install'|'inventory'} phase @param {number} timeoutMs */
+  /** @param {{label:string,manager:'npm'|'pnpm',version:string,registry:string,projectDir:string,cacheDir:string,managerDir:string,workspaceProject:boolean}} options @param {'version'|'install'|'inventory'} phase @param {number} timeoutMs */
   async runManagerPhase(options, phase, timeoutMs) {
     this.assertNotInterrupted();
     const name = `lockfile-matrix-${options.label}-${phase}-${(0, import_node_crypto.randomBytes)(5).toString("hex")}`;
@@ -7580,6 +7584,7 @@ var DockerRunner = class {
       gid: this.gid,
       projectDir: options.projectDir,
       cacheDir: options.cacheDir,
+      managerDir: options.managerDir,
       registry: options.registry,
       command
     });
@@ -7656,7 +7661,7 @@ function buildDockerRunArgs(options) {
     "NPM_CONFIG_UPDATE_NOTIFIER=false",
     "NPM_CONFIG_USERCONFIG=/tmp/empty-npmrc",
     "NPM_CONFIG_GLOBALCONFIG=/tmp/empty-global-npmrc",
-    "NPM_CONFIG_CACHE=/matrix-cache/bootstrap-npm",
+    `NPM_CONFIG_CACHE=${options.projectDir ? "/matrix-cache/npm-meta" : "/matrix-manager/bootstrap-npm"}`,
     "PNPM_HOME=/tmp/pnpm-home",
     "XDG_CACHE_HOME=/matrix-cache/xdg-cache",
     "XDG_CONFIG_HOME=/tmp/xdg-config",
@@ -7694,20 +7699,20 @@ function buildDockerRunArgs(options) {
     "2",
     "--tmpfs",
     "/tmp:rw,nosuid,nodev,size=1073741824",
-    "--mount",
-    `type=bind,source=${options.cacheDir},target=/matrix-cache`,
     "--workdir",
     options.projectDir ? "/workspace" : "/tmp",
     "--label",
     "com.micro-tool-lab.lockfile-matrix=true"
   ];
+  if (options.managerDir) args.splice(args.indexOf("--workdir"), 0, "--mount", `type=bind,source=${options.managerDir},target=/matrix-manager${options.projectDir ? ",readonly" : ""}`);
+  if (options.cacheDir) args.splice(args.indexOf("--workdir"), 0, "--mount", `type=bind,source=${options.cacheDir},target=/matrix-cache`);
   if (options.projectDir) args.splice(args.indexOf("--workdir"), 0, "--mount", `type=bind,source=${options.projectDir},target=/workspace`);
   for (const value of environment) args.push("--env", value);
   args.push(options.image, ...options.command);
   return args;
 }
 function managerCommand(manager, version, phase, registry, options = {}) {
-  const prefix = [`/matrix-cache/manager/node_modules/.bin/${manager}`];
+  const prefix = [`/matrix-manager/node_modules/.bin/${manager}`];
   if (manager === "npm") {
     if (phase === "version") return [...prefix, "--version"];
     if (phase === "install") return [...prefix, "ci", "--ignore-scripts", "--no-audit", "--no-fund", "--cache", "/matrix-cache/project-npm-cache", "--registry", registry];
@@ -7725,12 +7730,12 @@ function bootstrapManagerCommand(manager, version, registry) {
     "npm",
     "install",
     "--prefix",
-    "/matrix-cache/manager",
+    "/matrix-manager",
     `${manager}@${version}`,
     "--no-audit",
     "--no-fund",
     "--cache",
-    "/matrix-cache/bootstrap-npm",
+    "/matrix-manager/bootstrap-npm",
     "--registry",
     registry,
     manager === "pnpm" ? "--ignore-scripts=false" : "--ignore-scripts"
@@ -8280,6 +8285,17 @@ var PNPM_EXECUTION_KEYS = /* @__PURE__ */ new Set([
   "usenodeversion",
   "executionenv"
 ]);
+var PNPM_PATH_KEYS = /* @__PURE__ */ new Set([
+  "modulesdir",
+  "virtualstoredir",
+  "globalvirtualstoredir",
+  "storedir",
+  "cachedir",
+  "statedir",
+  "lockfiledir",
+  "globaldir",
+  "globalbindir"
+]);
 var PNPM_REGISTRY_KEYS = /* @__PURE__ */ new Set([
   "registry",
   "registries",
@@ -8432,7 +8448,11 @@ async function inspectLockfile(file, manager, root, problems) {
     await inspectPnpmYaml(file, label, root, problems, true);
   }
 }
-function inspectStructuredDependencyData(value, base, root, label, problems) {
+function inspectStructuredDependencyData(value, base, root, label, problems, state = { active: /* @__PURE__ */ new WeakSet(), count: 0 }, depth = 0) {
+  if (depth > 256 || state.count > 1e5) {
+    problems.push(`${label} exceeds the supported structured-data depth or node count.`);
+    return;
+  }
   if (typeof value === "string") {
     if (/^(?:file|link):/.test(value)) inspectLocalPath(value, base, root, label, problems);
     else if (/^(?:git(?:\+[^:]+)?:|git@|github:|gitlab:|bitbucket:|ssh:)/i.test(value)) problems.push(`${label} contains a Git/SSH dependency, which V0.1 refuses.`);
@@ -8440,14 +8460,28 @@ function inspectStructuredDependencyData(value, base, root, label, problems) {
     return;
   }
   if (Array.isArray(value)) {
-    for (const item of value) inspectStructuredDependencyData(item, base, root, label, problems);
+    if (state.active.has(value)) {
+      problems.push(`${label} contains a recursive YAML alias.`);
+      return;
+    }
+    state.active.add(value);
+    state.count += 1;
+    for (const item of value) inspectStructuredDependencyData(item, base, root, label, problems, state, depth + 1);
+    state.active.delete(value);
   } else if (value && typeof value === "object") {
+    if (state.active.has(value)) {
+      problems.push(`${label} contains a recursive YAML alias.`);
+      return;
+    }
+    state.active.add(value);
+    state.count += 1;
     const record = (
       /** @type {Record<string,unknown>} */
       value
     );
     if (record.link === true && typeof record.resolved === "string") inspectLocalPath(record.resolved, base, root, label, problems);
-    for (const item of Object.values(value)) inspectStructuredDependencyData(item, base, root, label, problems);
+    for (const item of Object.values(value)) inspectStructuredDependencyData(item, base, root, label, problems, state, depth + 1);
+    state.active.delete(value);
   }
 }
 function inspectLocalPath(value, base, root, label, problems) {
@@ -8469,25 +8503,50 @@ async function inspectPnpmYaml(file, label, root, problems, inspectRegistryKeys)
     return;
   }
   for (const document of documents) {
-    const value = document.toJS({ maxAliasCount: 100 });
+    let value;
+    try {
+      value = document.toJS({ maxAliasCount: 100 });
+    } catch {
+      problems.push(`${label} exceeds the supported YAML alias boundary.`);
+      continue;
+    }
     inspectStructuredDependencyData(value, import_node_path6.default.dirname(file), root, label, problems);
     inspectForbiddenPnpmKeys(value, label, problems, inspectRegistryKeys);
   }
 }
-function inspectForbiddenPnpmKeys(value, label, problems, inspectRegistryKeys, parents = []) {
+function inspectForbiddenPnpmKeys(value, label, problems, inspectRegistryKeys, parents = [], state = { active: /* @__PURE__ */ new WeakSet(), count: 0 }, depth = 0) {
+  if (depth > 256 || state.count > 1e5) {
+    problems.push(`${label} exceeds the supported pnpm configuration depth or node count.`);
+    return;
+  }
   if (Array.isArray(value)) {
-    for (const item of value) inspectForbiddenPnpmKeys(item, label, problems, inspectRegistryKeys, parents);
+    if (state.active.has(value)) {
+      problems.push(`${label} contains a recursive YAML alias.`);
+      return;
+    }
+    state.active.add(value);
+    state.count += 1;
+    for (const item of value) inspectForbiddenPnpmKeys(item, label, problems, inspectRegistryKeys, parents, state, depth + 1);
+    state.active.delete(value);
     return;
   }
   if (!value || typeof value !== "object") return;
+  if (state.active.has(value)) {
+    problems.push(`${label} contains a recursive YAML alias.`);
+    return;
+  }
+  state.active.add(value);
+  state.count += 1;
   for (const [key, item] of Object.entries(value)) {
     const normalized = key.replace(/[-_.]/g, "").toLowerCase();
-    const executionKey = PNPM_EXECUTION_KEYS.has(normalized);
     const insideDependencyMap = parents.some((parent) => /^(?:dependencies|devdependencies|optionaldependencies|packages|snapshots|catalogs)$/.test(parent));
+    const executionKey = !insideDependencyMap && PNPM_EXECUTION_KEYS.has(normalized);
+    const pathKey = !insideDependencyMap && PNPM_PATH_KEYS.has(normalized);
     const registryKey = inspectRegistryKeys && !insideDependencyMap && (PNPM_REGISTRY_KEYS.has(normalized) || /:registry$/i.test(key));
-    if (executionKey || registryKey) problems.push(`${label} contains forbidden pnpm configuration key: ${key}`);
-    inspectForbiddenPnpmKeys(item, `${label}.${key}`, problems, inspectRegistryKeys, [...parents, normalized]);
+    if (executionKey || pathKey || registryKey) problems.push(`${label} contains forbidden pnpm configuration key: ${key}`);
+    inspectForbiddenPnpmKeys(item, `${label}.${key}`, problems, inspectRegistryKeys, [...parents, normalized], state, depth + 1);
   }
+  state.active.delete(value);
 }
 function inspectRegistryUrl(value, label, problems) {
   try {
