@@ -6,7 +6,7 @@ The tool runs the baseline and candidate in separate Linux/amd64 containers, for
 
 ## Status
 
-V0.1 is a validation candidate. The local release gate and private GitHub-hosted Linux Docker gate pass for commit `26ad446b07a324113da6c2e7314c8e83000ec278`. Independent review and a public-visibility rerun remain required before a tag or GitHub Marketplace listing.
+V0.1 has passed the local release gate, independent review, and both private and public GitHub-hosted Linux Docker validation. The public rerun for commit `8f622f95dca05d403a50390aad19c796ee3a3bba` is [CI run 32351116580](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/actions/runs/32351116580). Exact evidence and limitations are recorded in [VALIDATION.md](VALIDATION.md).
 
 ## What V0.1 does
 
@@ -85,7 +85,23 @@ Config fields:
 
 ## GitHub Action
 
-The bundled Action requires Docker and only needs `contents: read`. Do not use `pull_request_target` to execute pull-request content. Until a validated release tag exists, exercise it from a checkout with `uses: ./` as the repository CI does.
+The bundled Action requires Docker and only needs `contents: read`. Do not use `pull_request_target` to execute pull-request content.
+
+```yaml
+permissions:
+  contents: read
+
+steps:
+  - uses: actions/checkout@v4
+    with:
+      persist-credentials: false
+  - uses: yanjinzheng2005-gif/lockfile-clean-install-matrix@v0.1.0
+    with:
+      config: lockfile-matrix.json
+      fail-on: review
+```
+
+The config path is relative to the checked-out workspace. Pin the immutable release-specific tag or a full commit SHA in production workflows.
 
 The inventory evidence limit is 16 MiB per leg. Exceeding it produces `INVENTORY_INCONCLUSIVE`; truncated JSON is never treated as a passing tree.
 

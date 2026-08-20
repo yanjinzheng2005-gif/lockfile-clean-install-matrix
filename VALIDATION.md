@@ -4,9 +4,11 @@ Validation date: 2026-08-20 (Asia/Shanghai)
 
 ## Current conclusion
 
-Local candidate gate: **PASS**. Private GitHub-hosted Linux gate: **PASS**.
+Local release gate: **PASS**. Public GitHub-hosted Linux gate: **PASS**.
 
 Run [32337920436](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/actions/runs/32337920436) completed successfully for fixed commit `26ad446b07a324113da6c2e7314c8e83000ec278`. It passed Node 20/22/24 release gates, the committed Action before any build, real timeout/removal and mutation probes, npm and pnpm green workspace matrices, and the expected pnpm 12 minimal-image CA red matrix. This is engineering evidence, not evidence of a public release, Marketplace listing, or external adoption.
+
+After the repository became public, workflow-dispatch run [32351116580](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/actions/runs/32351116580) independently reran the same four jobs for commit `8f622f95dca05d403a50390aad19c796ee3a3bba`; all passed. The code between the fixed implementation commit and this public rerun is unchanged. The later commit only corrected public validation documentation.
 
 ## Local gate
 
@@ -60,8 +62,17 @@ Authoritative artifact: `linux-cold-install-receipts`, artifact ID `9395305509`,
 
 All three receipts record `sourceUnchanged: true`. A targeted scan found no host path, GitHub/npm token, authorization header, or lifecycle sentinel leak.
 
+Public rerun `32351116580` produced a fresh `linux-cold-install-receipts` artifact:
+
+- npm green JSON SHA-256: `196712c970c2b33f55669cf792bd054b0aab3c5e547c49a5524f167d7bb08357`
+- pnpm green JSON SHA-256: `87401e5a9e187aab165df9d97bd253630f8b2c513f7507c898e12a8e1e897bed`
+- pnpm 12 red JSON SHA-256: `1861b5aab9110eaa300eab5baabdceef881af43ba1acda565b09bdf483b54bba`
+- Docker boundary probe SHA-256: `c6f6ef23fde17053e116ae1f25eb5eeeb2fb14efa38088381dc7157a6ff436ed`
+
+The public receipts again record the exact requested and observed manager versions, the expected red/green verdicts, and `sourceUnchanged: true`. A targeted secret scan of the artifact and all 16 historical CI logs found no host path, credential URL, authorization header, private key, or GitHub/npm token value.
+
 ## Evidence boundary
 
 Local fake-Docker tests validate orchestration, classification, mutation detection, reports, and safety arguments. The real Linux run closes Docker behavior, manager flags, pinned image, workspace trees, timeout removal, mutation, and red/green oracle execution. It does not prove every repository, OS, registry, or network condition.
 
-External user feedback: 0. Repository visibility: private validation only. Public repository: not available. Release/tag: not created. Marketplace: not listed. Community launch: not performed.
+External user feedback remains 0. At the time public validation run `32351116580` completed, the repository was public and the release tag, Marketplace listing, and community launch had not yet been performed. Those publication steps do not change the engineering evidence boundary above.
