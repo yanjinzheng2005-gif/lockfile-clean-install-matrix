@@ -6,7 +6,7 @@ The tool runs the baseline and candidate in separate Linux/amd64 containers, for
 
 ## Status
 
-V0.1 is a validation candidate. The local release gate passes, but the real Linux Docker goldens and public release gate must pass before this repository is tagged or listed in GitHub Marketplace.
+V0.1 is a validation candidate. The local release gate and private GitHub-hosted Linux Docker gate pass for commit `26ad446b07a324113da6c2e7314c8e83000ec278`. Independent review and a public-visibility rerun remain required before a tag or GitHub Marketplace listing.
 
 ## What V0.1 does
 

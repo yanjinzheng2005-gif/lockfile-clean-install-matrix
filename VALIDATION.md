@@ -4,9 +4,9 @@ Validation date: 2026-08-18 (Asia/Shanghai)
 
 ## Current conclusion
 
-Local candidate gate: **PASS**.
+Local candidate gate: **PASS**. Private GitHub-hosted Linux gate: **PASS**.
 
-Real Linux Docker goldens: **partially proven, not yet green as a complete run**. Earlier runs proved the three Node release gates, committed Action before build, real timeout cleanup, real protected-file mutation, CJS CLI, npm workspace PASS/PASS, and a complete non-empty pnpm 11 workspace tree. pnpm 12 then exposed two distinct facts: its package needs a projectless bootstrap script to install the native binary, and that native binary fails in the pinned minimal Node image because the image has no system CA bundle. The fifth run failed only because a new probe incorrectly required that CA file. The sixth run proved the npm and pnpm green matrices plus the pnpm 12 expected red matrix; its final failure was only an assertion that the rejected no-symlink npm/cli#9433 adaptation should be red. Both npm versions actually installed, so that adaptation has been removed from the authoritative gate rather than misrepresented. One more Linux run must prove the revised gate end to end. This file must not be read as evidence of a public release, Marketplace listing, or external adoption.
+Run [32337920436](https://github.com/yanjinzheng2005-gif/lockfile-clean-install-matrix/actions/runs/32337920436) completed successfully for fixed commit `26ad446b07a324113da6c2e7314c8e83000ec278`. It passed Node 20/22/24 release gates, the committed Action before any build, real timeout/removal and mutation probes, npm and pnpm green workspace matrices, and the expected pnpm 12 minimal-image CA red matrix. This is engineering evidence, not evidence of a public release, Marketplace listing, or external adoption.
 
 ## Local gate
 
@@ -36,9 +36,9 @@ Environment: macOS arm64, Node.js 25.3.0, npm 11.7.0.
 - Workflow permission and container boundary scan: PASS.
 - JSON Schema validation for example config and generated receipt: PASS.
 
-## Real Linux release blockers
+## Real Linux gate result
 
-CI must still prove all of the following on a real GitHub-hosted Linux runner:
+The private GitHub-hosted runner proved all of the following:
 
 1. npm workspace pass fixture: root and child dependencies present; baseline PASS, candidate PASS, overall NO_REGRESSION.
 2. pnpm workspace pass fixture: root and child dependencies present; baseline PASS, candidate PASS, overall NO_REGRESSION.
@@ -51,8 +51,17 @@ CI must still prove all of the following on a real GitHub-hosted Linux runner:
 
 Real run `32337356424` proved that the no-symlink npm/cli#9433 adaptation did not reproduce the published result. It is excluded from release assertions and may only be described as rejected research history.
 
+Authoritative artifact: `linux-cold-install-receipts`, artifact ID `9395305509`, 11,258 bytes.
+
+- npm green JSON SHA-256: `885f471b0c6d677dce5069c873cdab0733767fb25f7dbd2875641debb6a89417`
+- pnpm green JSON SHA-256: `7104308836001b7cde98b5fc305c4aabec8894d7e917fee55fe5d2ed4f932892`
+- pnpm 12 red JSON SHA-256: `51b999d5882a2298eabcea5c5cfc0a97379ed127e657ef27369e53ab75009c29`
+- Docker boundary probe SHA-256: `c6f6ef23fde17053e116ae1f25eb5eeeb2fb14efa38088381dc7157a6ff436ed`
+
+All three receipts record `sourceUnchanged: true`. A targeted scan found no host path, GitHub/npm token, authorization header, or lifecycle sentinel leak.
+
 ## Evidence boundary
 
-Local fake-Docker tests validate orchestration, classification, mutation detection, reports, and safety arguments. They do not prove Docker behavior, actual manager flags, Node image availability, or the public regression. Only the real Linux job can close those items.
+Local fake-Docker tests validate orchestration, classification, mutation detection, reports, and safety arguments. The real Linux run closes Docker behavior, manager flags, pinned image, workspace trees, timeout removal, mutation, and red/green oracle execution. It does not prove every repository, OS, registry, or network condition.
 
 External user feedback: 0. Repository visibility: private validation only. Public repository: not available. Release/tag: not created. Marketplace: not listed. Community launch: not performed.
